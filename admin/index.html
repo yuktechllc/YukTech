@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#0B3154">
+  <link rel="icon" type="image/png" href="./favicon.png">
+  <link rel="apple-touch-icon" href="./favicon.png">
+  <title>YUKTECH Admin</title>
+  <link rel="stylesheet" href="./admin.css">
+  <script src="./config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./admin.js" defer></script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="../index.html"><img class="brand-logo admin-logo" src="./logo.png" alt="YUKTECH"><span class="brand-text"><small>Website admin</small></span></a>
+  <div class="topbar-actions">
+    <a href="../index.html" target="_blank" rel="noopener" class="site-link">View site ↗</a>
+    <button id="signout-button" class="btn ghost" type="button" hidden>Sign out</button>
+  </div>
+</header>
+
+<main class="shell">
+  <section id="login-panel" class="card auth-card">
+    <img class="login-logo admin-logo" src="./logo.png" alt="YUKTECH">
+    <div class="eyebrow">SECURE WORKSPACE</div>
+    <h1>Admin sign in</h1>
+    <p class="muted">Access is limited to accounts that have been given a YUKTECH role.</p>
+    <form id="login-form">
+      <label>Email<input type="email" id="login-email" autocomplete="username" inputmode="email" required></label>
+      <label>Password<input type="password" id="login-password" autocomplete="current-password" required></label>
+      <button class="btn primary block" type="submit">Sign in</button>
+    </form>
+    <p id="login-message" class="message" aria-live="polite"></p>
+  </section>
+
+  <section id="app-panel" hidden>
+    <div class="welcome">
+      <h1 id="page-title">Dashboard</h1>
+      <p id="user-summary" class="muted"></p>
+    </div>
+    <p id="app-message" class="message toast" aria-live="polite"></p>
+
+    <!-- ============ OVERVIEW ============ -->
+    <section class="tab-panel" id="tab-overview">
+      <div class="stats">
+        <article class="stat"><span>Live jobs</span><b id="stat-jobs">—</b></article>
+        <article class="stat"><span>Job drafts</span><b id="stat-drafts">—</b></article>
+        <article class="stat"><span>Awaiting review</span><b id="stat-review">—</b></article>
+      </div>
+      <div class="quick-grid">
+        <button class="quick" data-go="contact" type="button"><span class="qi">☎</span><b>Contact &amp; links</b><small>Phone, address, email, LinkedIn</small></button>
+        <button class="quick" data-go="brand" type="button"><span class="qi">◧</span><b>Logo &amp; founder</b><small>Logo, photo and bio</small></button>
+        <button class="quick" data-go="jobs" type="button"><span class="qi">✦</span><b>Job postings</b><small>Add, publish or close jobs</small></button>
+      </div>
+    </section>
+
+    <!-- ============ CONTACT & LINKS ============ -->
+    <section class="tab-panel" id="tab-contact" hidden>
+      <form class="settings-form" data-group="contact" novalidate>
+        <div class="card"><h2>Contact &amp; social links</h2><p class="muted">Shown in the footer and on the Contact page of every page of the website.</p>
+          <div class="fields" data-fields="contact"></div></div>
+        <div class="card"><h2>United States office</h2><div class="fields" data-fields="us"></div></div>
+        <div class="card"><h2>India office</h2><div class="fields" data-fields="india"></div></div>
+        <div class="card"><h2>Footer &amp; announcement banner</h2><div class="fields" data-fields="footer"></div></div>
+        <div class="savebar"><button class="btn primary" type="submit">Save &amp; publish</button><button class="btn ghost" type="button" data-reload="contact">Discard changes</button></div>
+      </form>
+      <p class="note">The contact and job-application <b>forms</b> deliver mail to the address written inside <code>contact.html</code> and <code>apply.html</code>. Changing the public email here does not move that inbox.</p>
+    </section>
+
+    <!-- ============ LOGO & FOUNDER ============ -->
+    <section class="tab-panel" id="tab-brand" hidden>
+      <form class="settings-form" data-group="brand" novalidate>
+        <div class="card"><h2>Website logo</h2><p class="muted">Used in the header and footer of every page. PNG with a transparent background works best.</p>
+          <div class="fields" data-fields="logo"></div></div>
+        <div class="card"><h2>Founder photo</h2><p class="muted">Shown in the Leadership section of the home page.</p>
+          <div class="fields" data-fields="founderphoto"></div></div>
+        <div class="card"><h2>Founder description</h2><p class="muted">Leave a blank line between paragraphs only if you need one; each box below is one paragraph on the site.</p>
+          <div class="fields" data-fields="founder"></div></div>
+        <div class="savebar"><button class="btn primary" type="submit">Save &amp; publish</button><button class="btn ghost" type="button" data-reload="brand">Discard changes</button></div>
+      </form>
+    </section>
+
+    <!-- ============ JOBS ============ -->
+    <section class="tab-panel" id="tab-jobs" hidden>
+      <div class="card">
+        <div class="section-heading"><div><h2>Job postings</h2><p class="muted">Jobs appear on the Careers page once published.</p></div><button class="btn primary" id="new-job" type="button">+ Add job</button></div>
+        <form id="job-form" class="editor-form" hidden>
+          <input type="hidden" id="job-id"><input type="hidden" id="job-supersedes-id">
+          <div class="form-grid">
+            <label>Job title<input id="job-title" required maxlength="160" placeholder="e.g. Senior Java Developer"></label>
+            <label>Department<select id="job-department"></select><input id="job-department-other" maxlength="80" placeholder="Type the new department name" hidden aria-label="New department name"></label>
+            <label>Location<input id="job-location" required placeholder="Hyderabad / Remote"></label>
+            <label>Work type<select id="job-work-type"><option>Full-time</option><option>Contract</option><option>Part-time</option><option>Internship</option></select></label>
+            <label>Experience<input id="job-experience" placeholder="3–5 years"></label>
+            <label>Also advertised on<select id="job-board"><option value="website">YUKTECH website only</option><option value="linkedin">LinkedIn</option><option value="indeed">Indeed</option><option value="naukri">Naukri</option><option value="other">Other / ATS</option></select></label>
+            <label class="full">Job description
+              <textarea id="job-description" rows="10" required placeholder="About the role&#10;Responsibilities:&#10;- Build and maintain…&#10;Requirements:&#10;- 3+ years of…"></textarea>
+              <small class="help">Tip: a line ending with a colon becomes a heading, and lines starting with “-” become bullet points on the Careers page.</small>
+            </label>
+            <label class="full">Application URL (optional)<input id="job-apply-url" type="url" inputmode="url" placeholder="Leave blank to use the YUKTECH application form"></label>
+          </div>
+          <div class="actions">
+            <button type="submit" class="btn secondary" data-mode="draft">Save draft</button>
+            <button type="submit" class="btn primary" id="job-publish-btn" data-mode="publish" hidden>Save &amp; publish</button>
+            <button type="button" id="preview-job" class="btn ghost">Preview</button>
+            <button type="button" id="cancel-job" class="btn ghost">Cancel</button>
+          </div>
+          <div id="job-preview" class="job-preview" hidden></div>
+        </form>
+        <div class="toolbar">
+          <input id="job-search" type="search" placeholder="Search jobs…" aria-label="Search jobs">
+          <div class="chips" id="job-filters" role="tablist" aria-label="Filter jobs by status">
+            <button class="chip active" data-f="all" type="button">All</button><button class="chip" data-f="published" type="button">Live</button><button class="chip" data-f="in_review" type="button">In review</button><button class="chip" data-f="draft" type="button">Drafts</button><button class="chip" data-f="closed" type="button">Closed</button>
+          </div>
+        </div>
+        <div id="job-list" class="record-list"></div>
+      </div>
+    </section>
+
+    <!-- ============ MORE (advanced) ============ -->
+    <section class="tab-panel" id="tab-more" hidden>
+      <div class="card"><h2>More tools</h2><p class="muted">Occasional tasks. You do not need these for everyday updates.</p>
+        <div class="quick-grid">
+          <button class="quick" data-go="pages" type="button"><span class="qi">¶</span><b>Page text</b><small>Edit headings and paragraphs</small></button>
+          <button class="quick" data-go="media" type="button"><span class="qi">▣</span><b>Image library</b><small>Upload and copy image links</small></button>
+          <button class="quick reviewer-only" data-go="review" type="button"><span class="qi">✓</span><b>Review queue</b><small>Approve or reject changes</small></button>
+          <button class="quick admin-only" data-go="users" type="button"><span class="qi">☺</span><b>User access</b><small>Give someone a role</small></button>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-pages" hidden>
+      <div class="card"><div class="section-heading"><div><h2>Page text</h2><p class="muted">Pick a page, then tap any field to edit it.</p></div><button class="btn ghost" data-go="more" type="button">← Back</button></div>
+        <label>Page<select id="page-picker"><option value="">Choose a page…</option><option value="index">Home</option><option value="about">About</option><option value="services">Services</option><option value="staffing-workforce">IT Staffing</option><option value="it-solutions">IT Solutions</option><option value="it-consulting">IT Consulting</option><option value="employers">For Businesses</option><option value="candidates">Candidates</option><option value="careers">Careers</option><option value="contact">Contact</option><option value="software-engineering">Software Engineering</option><option value="cloud-solutions">Cloud Solutions</option><option value="data-analytics">Data &amp; Analytics</option><option value="enterprise-applications">Enterprise Applications</option></select></label>
+        <div id="page-fields" class="record-list"></div>
+        <form id="content-form" class="editor-form" hidden>
+          <input type="hidden" id="content-id">
+          <label>Field<input id="content-key" required pattern="[a-zA-Z0-9._-]+" readonly></label>
+          <label>Type<select id="content-type"><option value="text">Text</option><option value="url">Link (URL)</option><option value="image_url">Image URL</option></select></label>
+          <label>Value<textarea id="content-value" rows="5" required></textarea></label>
+          <div class="actions"><button type="submit" class="btn primary" data-mode="publish" id="content-publish" hidden>Save &amp; publish</button><button type="submit" class="btn secondary" data-mode="draft">Save draft</button><button type="button" id="cancel-content" class="btn ghost">Cancel</button></div>
+        </form>
+        <div id="content-list" class="record-list" hidden></div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-media" hidden>
+      <div class="card"><div class="section-heading"><div><h2>Image library</h2><p class="muted">JPG, PNG, WEBP or GIF up to 5 MB.</p></div><button class="btn ghost" data-go="more" type="button">← Back</button></div>
+        <form id="media-form"><label>Choose image<input id="media-file" type="file" accept="image/jpeg,image/png,image/webp,image/gif" required></label><button class="btn primary" type="submit">Upload image</button></form>
+        <p id="media-url-wrap" hidden class="url-copy"><input id="media-url" readonly aria-label="Public URL"><button id="copy-media-url" class="btn secondary" type="button">Copy URL</button></p>
+        <div id="media-list" class="media-list"></div></div>
+    </section>
+
+    <section class="tab-panel" id="tab-review" hidden>
+      <div class="card"><div class="section-heading"><div><h2>Review queue</h2><p class="muted">Approve or reject submitted changes.</p></div><button class="btn ghost" data-go="more" type="button">← Back</button></div><div id="review-list" class="record-list"></div></div>
+    </section>
+
+    <section class="tab-panel" id="tab-users" hidden>
+      <div class="card"><div class="section-heading"><div><h2>User access</h2><p class="muted">Create the user in Supabase Authentication first, then paste their UUID here.</p></div><button class="btn ghost" data-go="more" type="button">← Back</button></div>
+        <form id="role-form" class="editor-form"><label>Auth user UUID<input id="role-user-id" required placeholder="UUID from Supabase Auth"></label><label>Role<select id="role-value"><option value="editor">Editor</option><option value="reviewer">Reviewer</option><option value="admin">Admin</option></select></label><button class="btn primary" type="submit">Save role</button></form>
+        <div id="role-list" class="record-list"></div></div>
+    </section>
+
+    <footer class="foot"><img class="foot-logo admin-logo" src="./logo.png" alt="YUKTECH"><br>YUKTECH Admin · Private workspace</footer>
+  </section>
+</main>
+
+<nav id="bottom-nav" class="bottom-nav" aria-label="Admin sections" hidden>
+  <button data-tab="overview" type="button"><i>⌂</i><span>Home</span></button>
+  <button data-tab="contact" type="button" class="admin-only"><i>☎</i><span>Contact</span></button>
+  <button data-tab="brand" type="button" class="admin-only"><i>◧</i><span>Brand</span></button>
+  <button data-tab="jobs" type="button"><i>✦</i><span>Jobs</span></button>
+  <button data-tab="more" type="button"><i>⋯</i><span>More</span></button>
+</nav>
+<noscript>This administration panel requires JavaScript.</noscript>
+</body>
+</html>
