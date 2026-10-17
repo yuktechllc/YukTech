@@ -89,7 +89,8 @@
     $('#new-job').addEventListener('click', () => openJob());
     $('#cancel-job').addEventListener('click', () => $('#job-form').hidden = true);
     $('#job-form').addEventListener('submit', saveJob);
-    $('#preview-job').addEventListener('click', previewJob);
+    $('#preview-job').addEventListener('click', () => { previewJob(); $('#job-preview').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); });
+    bindDescriptionTools();
     $('#job-search').addEventListener('input', renderJobs);
     $('#job-department').addEventListener('change', () => { const o = $('#job-department').value === OTHER; $('#job-department-other').hidden = !o; if (o) $('#job-department-other').focus(); });
     $('#job-filters').addEventListener('click', e => { const c = e.target.closest('.chip'); if (!c) return; $$('#job-filters .chip').forEach(x => x.classList.toggle('active', x === c)); jobFilter = c.dataset.f; renderJobs(); });
@@ -326,18 +327,111 @@
     await Promise.all([loadJobs(), loadStats()]);
   }
   function previewJob() {
-    const p = jobPayload(), box = $('#job-preview'); box.replaceChildren(); box.hidden = false;
+    const p = jobPayload(), box = $('#job-preview'); box.replaceChildren(); box.hidden = false; box.classList.add('job-details');
     const h = document.createElement('h3'); h.textContent = p.title || 'Job title'; box.append(h);
     const ul = document.createElement('ul'); ul.className = 'pv-chips';
     [p.location, p.work_type, p.department, p.experience].filter(Boolean).forEach(c => { const li = document.createElement('li'); li.textContent = c; ul.append(li); }); box.append(ul);
-    let list = null;
-    p.description.replace(/\r/g, '').split('\n').forEach(raw => {
-      const line = raw.trim(); if (!line) { list = null; return; }
-      const b = line.match(/^[-•*–]\s+(.*)$/);
-      if (b) { if (!list) { list = document.createElement('ul'); box.append(list); } const li = document.createElement('li'); li.textContent = b[1]; list.append(li); return; }
-      list = null; const el = document.createElement(line.length <= 70 && /:$/.test(line) ? 'h4' : 'p'); el.textContent = el.tagName === 'H4' ? line.replace(/:$/, '') : line; box.append(el);
+    box.append(formatDescription(p.description));
+  }
+
+  /* Turns the description text into headings, bold text, bullet lists (with sub-bullets) and paragraphs.
+     Syntax:  "## Heading"  or a short line ending with ":"   |   "- point"   |   "  - sub-point" (indented)
+              "1. step"     |   **bold**.   No HTML is ever injected: everything is built with textContent. */
+  function formatDescription(text){
+    const frag = document.createDocumentFragment(); let stack = [];
+    const inline = (parent, s) => String(s).split(/\*\*(.+?)\*\*/g).forEach((part, i) => {
+      if (!part) return;
+      if (i % 2) { const b = document.createElement('strong'); b.textContent = part; parent.append(b); } else parent.append(document.createTextNode(part));
     });
-    box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    String(text || '').replace(/\r/g, '').split('\n').forEach(raw => {
+      if (!raw.trim()) { stack = []; return; }
+      const item = raw.match(/^([ \t]*)([-•*–▪◦●○]|\d{1,2}[.)])[ \t]+(.*)$/);
+      if (item) {
+        const level = Math.min(2, Math.floor(item[1].replace(/\t/g, '    ').length / 2));
+        const ordered = /\d/.test(item[2]);
+        while (stack.length > level + 1) stack.pop();
+        while (stack.length < level + 1) {
+          const list = document.createElement(ordered && stack.length === 0 ? 'ol' : 'ul'); list.className = 'job-bullets' + (stack.length ? ' job-sub' : '');
+          const parentLi = stack.length ? stack[stack.length - 1].lastElementChild : null;
+          (parentLi || frag).append(list); stack.push(list);
+        }
+        const li = document.createElement('li'); inline(li, item[3]); stack[stack.length - 1].append(li); return;
+      }
+      stack = [];
+      const line = raw.trim(), h = line.match(/^#{1,6}\s+(.*)$/);
+      if (h || (line.length <= 70 && /:$/.test(line) && !/\*\*/.test(line.replace(/\*\*(.+?)\*\*/g, '')))) {
+        const el = document.createElement('h4'); inline(el, (h ? h[1] : line.replace(/:$/, '')).replace(/\*\*/g, '')); frag.append(el);
+      } else { const p = document.createElement('p'); inline(p, line); frag.append(p); }
+    });
+    return frag;
+  }
+
+  /* ---- formatting toolbar + smart paste for the description box ---- */
+  const BULLET_RE = /^([ \t]*)([-•*–▪◦●○]|\d{1,2}[.)])[ \t]+/;
+  function editLines(fn) {
+    const t = $('#job-description'); const v = t.value;
+    const start = v.lastIndexOf('\n', t.selectionStart - 1) + 1; let end = v.indexOf('\n', t.selectionEnd); if (end < 0) end = v.length;
+    const out = v.slice(start, end).split('\n').map(fn).join('\n');
+    t.setRangeText(out, start, end, 'select'); t.focus(); t.dispatchEvent(new Event('input'));
+  }
+  function applyFormat(kind) {
+    const t = $('#job-description');
+    if (kind === 'bold') {
+      const s = t.selectionStart, e = t.selectionEnd, sel = t.value.slice(s, e);
+      if (/^\*\*.+\*\*$/.test(sel)) t.setRangeText(sel.slice(2, -2), s, e, 'select'); else t.setRangeText('**' + (sel || 'bold text') + '**', s, e, 'select');
+      t.focus(); return;
+    }
+    editLines(line => {
+      if (!line.trim()) return line;
+      const m = line.match(BULLET_RE);
+      if (kind === 'heading') return /^#{1,6}\s/.test(line) ? line.replace(/^#{1,6}\s+/, '') : '## ' + line.replace(BULLET_RE, '').replace(/^\s+/, '');
+      if (kind === 'bullet') return m ? line.replace(BULLET_RE, '') : '- ' + line.replace(/^#{1,6}\s+/, '').trim();
+      if (kind === 'number') return /^[ \t]*\d{1,2}[.)]/.test(line) ? line.replace(BULLET_RE, '') : '1. ' + line.replace(BULLET_RE, '').trim();
+      if (kind === 'sub') return m ? (m[1].length >= 4 ? line : '  ' + line) : '  - ' + line.trim();
+      if (kind === 'out') return line.replace(/^( {1,2}|\t)/, '');
+      return line;
+    });
+  }
+  const BLOCK = /^(P|DIV|UL|OL|LI|H[1-6]|TABLE|TR|BLOCKQUOTE|SECTION|ARTICLE|PRE)$/;
+  function htmlToMarkup(html) {
+    const doc = new DOMParser().parseFromString(html.replace(/<!--[\s\S]*?-->/g, ''), 'text/html'); const lines = [];
+    const clean = s => s.replace(/[\u00a0\s]+/g, ' ');
+    const inlineOf = el => { let o = ''; el.childNodes.forEach(n => {
+      if (n.nodeType === 3) o += clean(n.nodeValue);
+      else if (n.nodeType === 1 && !/^(UL|OL)$/.test(n.tagName)) {
+        const inner = inlineOf(n); const w = (n.style && n.style.fontWeight) || '';
+        if (n.tagName === 'BR') o += ' ';
+        else if (/^(STRONG|B)$/.test(n.tagName) || w === 'bold' || parseInt(w, 10) >= 600) o += inner.trim() ? '**' + inner.trim() + '** ' : inner; else o += inner;
+      } }); return o.replace(/\*\*\s*\*\*/g, '').replace(/\s+/g, ' ').trim(); };
+    const walk = (node, depth) => node.childNodes.forEach(n => {
+      if (n.nodeType === 3) { const s = clean(n.nodeValue).trim(); if (s) lines.push(s); return; }
+      if (n.nodeType !== 1) return; const tag = n.tagName;
+      if (/^(SCRIPT|STYLE|META|HEAD)$/.test(tag)) return;
+      if (/^H[1-6]$/.test(tag)) { const s = inlineOf(n).replace(/\*\*/g, ''); if (s) lines.push('', '## ' + s, ''); return; }
+      if (tag === 'UL' || tag === 'OL') { let k = 0; n.childNodes.forEach(li => { if (li.nodeType !== 1 || li.tagName !== 'LI') return; k++;
+        const s = inlineOf(li); const pad = '  '.repeat(Math.min(depth, 2)); if (s) lines.push(pad + (tag === 'OL' ? k + '. ' : '- ') + s);
+        li.childNodes.forEach(c => { if (c.nodeType === 1 && /^(UL|OL)$/.test(c.tagName)) walk({ childNodes: [c] }, depth + 1); }); }); if (depth === 0) lines.push(''); return; }
+      if (BLOCK.test(tag) && ![...n.children].some(c => BLOCK.test(c.tagName))) { const s = inlineOf(n); if (s) lines.push(s, ''); return; }
+      walk(n, depth);
+    });
+    walk(doc.body, 0);
+    return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  }
+  function bindDescriptionTools() {
+    $$('.fmt-bar [data-fmt]').forEach(b => b.addEventListener('mousedown', e => e.preventDefault()));
+    $$('.fmt-bar [data-fmt]').forEach(b => b.addEventListener('click', () => applyFormat(b.dataset.fmt)));
+    const t = $('#job-description');
+    t.addEventListener('paste', e => {
+      const html = e.clipboardData && e.clipboardData.getData('text/html');
+      if (!html || !/<(ul|ol|li|h[1-6]|strong|b|p)[\s>]/i.test(html)) return;      // plain text: let the browser paste normally
+      const md = htmlToMarkup(html); if (!md) return;
+      e.preventDefault(); t.setRangeText(md, t.selectionStart, t.selectionEnd, 'end'); t.dispatchEvent(new Event('input'));
+    });
+    let timer; t.addEventListener('input', () => { if ($('#job-preview').hidden) return; clearTimeout(timer); timer = setTimeout(previewJob, 400); });
+    t.addEventListener('keydown', e => {                       // Tab / Shift+Tab indent bullets
+      if (e.key !== 'Tab') return; const line = t.value.slice(t.value.lastIndexOf('\n', t.selectionStart - 1) + 1).split('\n')[0];
+      if (!BULLET_RE.test(line)) return; e.preventDefault(); applyFormat(e.shiftKey ? 'out' : 'sub');
+    });
   }
   async function submitForReview(id) { const { error } = await sb.from('job_posts').update({ status: 'in_review', updated_by: currentUser.id }).eq('id', id); if (error) { say(error.message, true); return; } say('Submitted for review.'); await Promise.all([loadJobs(), loadStats()]); }
   async function publishJob(id) {

@@ -794,3 +794,12 @@ input, select, textarea, button { max-width:100%; }
 .job-toggle:hover{text-decoration:underline}
 @media(max-width:860px){.job-toolbar{grid-template-columns:1fr 1fr}.job-search{grid-column:1/-1}}
 @media(max-width:640px){.job-card{grid-template-columns:1fr;padding:20px}.job-card-side{flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:flex-start}.job-posted{order:3;width:100%}.job-toolbar{grid-template-columns:1fr}}
+
+.job-details strong{color:var(--navy);font-weight:700}
+.job-details ul.job-bullets,.job-details ol.job-bullets{margin:0 0 12px;padding-left:22px}
+.job-details .job-bullets li{margin:0 0 7px;line-height:1.65}
+.job-details .job-bullets li>.job-bullets{margin:6px 0 4px}
+.job-details ul.job-bullets>li::marker{color:var(--teal-dark)}
+.job-details ul.job-sub{list-style:circle}
+.job-details h4{padding-top:4px}
+.job-details h4:first-child{margin-top:0}

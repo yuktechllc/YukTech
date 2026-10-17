@@ -73,21 +73,38 @@
     if (days <= 30) return 'Posted ' + days + ' days ago';
     return 'Posted ' + new Date(iso).toLocaleDateString(undefined, {day:'numeric', month:'short', year:'numeric'});
   }
-  /* Turns the plain-text description into headings, bullet lists and paragraphs (no HTML is ever injected). */
+  /* Turns the description text into headings, bold text, bullet lists (with sub-bullets) and paragraphs.
+     Syntax:  "## Heading"  or a short line ending with ":"   |   "- point"   |   "  - sub-point" (indented)
+              "1. step"     |   **bold**.   No HTML is ever injected: everything is built with textContent. */
   function formatDescription(text){
-    const frag = document.createDocumentFragment(); let list = null;
+    const frag = document.createDocumentFragment(); let stack = [];
+    const inline = (parent, s) => String(s).split(/\*\*(.+?)\*\*/g).forEach((part, i) => {
+      if (!part) return;
+      if (i % 2) { const b = document.createElement('strong'); b.textContent = part; parent.append(b); } else parent.append(document.createTextNode(part));
+    });
     String(text || '').replace(/\r/g, '').split('\n').forEach(raw => {
-      const line = raw.trim();
-      if (!line) { list = null; return; }
-      const bullet = line.match(/^[-•*–]\s+(.*)$/);
-      if (bullet) { if (!list) { list = el('ul', 'job-bullets'); frag.append(list); } list.append(el('li', null, bullet[1])); return; }
-      list = null;
-      if (line.length <= 70 && /:$/.test(line)) frag.append(el('h4', null, line.replace(/:$/, '')));
-      else frag.append(el('p', null, line));
+      if (!raw.trim()) { stack = []; return; }
+      const item = raw.match(/^([ \t]*)([-•*–▪◦●○]|\d{1,2}[.)])[ \t]+(.*)$/);
+      if (item) {
+        const level = Math.min(2, Math.floor(item[1].replace(/\t/g, '    ').length / 2));
+        const ordered = /\d/.test(item[2]);
+        while (stack.length > level + 1) stack.pop();
+        while (stack.length < level + 1) {
+          const list = document.createElement(ordered && stack.length === 0 ? 'ol' : 'ul'); list.className = 'job-bullets' + (stack.length ? ' job-sub' : '');
+          const parentLi = stack.length ? stack[stack.length - 1].lastElementChild : null;
+          (parentLi || frag).append(list); stack.push(list);
+        }
+        const li = document.createElement('li'); inline(li, item[3]); stack[stack.length - 1].append(li); return;
+      }
+      stack = [];
+      const line = raw.trim(), h = line.match(/^#{1,6}\s+(.*)$/);
+      if (h || (line.length <= 70 && /:$/.test(line) && !/\*\*/.test(line.replace(/\*\*(.+?)\*\*/g, '')))) {
+        const el = document.createElement('h4'); inline(el, (h ? h[1] : line.replace(/:$/, '')).replace(/\*\*/g, '')); frag.append(el);
+      } else { const p = document.createElement('p'); inline(p, line); frag.append(p); }
     });
     return frag;
   }
-  const excerptOf = t => { const s = String(t || '').replace(/[-•*–]\s+/g, '').replace(/\s+/g, ' ').trim(); return s.length > 190 ? s.slice(0, 187).trimEnd() + '…' : s; };
+  const excerptOf = t => { const s = String(t || '').replace(/\*\*/g, '').replace(/^\s*#{1,6}\s+/gm, '').replace(/^\s*([-•*–▪◦●○]|\d{1,2}[.)])\s+/gm, '').replace(/\s+/g, ' ').trim(); return s.length > 190 ? s.slice(0, 187).trimEnd() + '…' : s; };
 
   async function applyJobs(){
     const host = document.querySelector('[data-jobs-list]'); if (!host) return;

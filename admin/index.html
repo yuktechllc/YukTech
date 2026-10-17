@@ -96,10 +96,18 @@
             <label>Work type<select id="job-work-type"><option>Full-time</option><option>Contract</option><option>Part-time</option><option>Internship</option></select></label>
             <label>Experience<input id="job-experience" placeholder="3–5 years"></label>
             <label>Also advertised on<select id="job-board"><option value="website">YUKTECH website only</option><option value="linkedin">LinkedIn</option><option value="indeed">Indeed</option><option value="naukri">Naukri</option><option value="other">Other / ATS</option></select></label>
-            <label class="full">Job description
-              <textarea id="job-description" rows="10" required placeholder="About the role&#10;Responsibilities:&#10;- Build and maintain…&#10;Requirements:&#10;- 3+ years of…"></textarea>
-              <small class="help">Tip: a line ending with a colon becomes a heading, and lines starting with “-” become bullet points on the Careers page.</small>
-            </label>
+            <div class="full desc-wrap"><label for="job-description" class="desc-label">Job description</label>
+              <div class="fmt-bar" role="toolbar" aria-label="Formatting">
+                <button type="button" data-fmt="heading" title="Section heading"><b>H</b> Heading</button>
+                <button type="button" data-fmt="bold" title="Bold"><b>B</b></button>
+                <button type="button" data-fmt="bullet" title="Bullet point">• Bullet</button>
+                <button type="button" data-fmt="sub" title="Sub-bullet (indent)">◦ Sub-bullet</button>
+                <button type="button" data-fmt="out" title="Outdent">⇤</button>
+                <button type="button" data-fmt="number" title="Numbered list">1. List</button>
+              </div>
+              <textarea id="job-description" rows="14" required placeholder="## About the role&#10;Short intro paragraph.&#10;&#10;## Key Responsibilities&#10;- **Talent Acquisition**&#10;  - Source and screen candidates&#10;  - Build a talent pipeline&#10;&#10;## Requirements&#10;- 3+ years of experience"></textarea>
+              <small class="help">Select lines and use the buttons above. <b>Pasting from Word, Google Docs or ChatGPT keeps the headings, bold text and bullets automatically.</b> Check the result with Preview.</small>
+            </div>
             <label class="full">Application URL (optional)<input id="job-apply-url" type="url" inputmode="url" placeholder="Leave blank to use the YUKTECH application form"></label>
           </div>
           <div class="actions">

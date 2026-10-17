@@ -124,3 +124,14 @@ input:focus,textarea:focus,select:focus{outline:3px solid #38a5a530;border-color
 .auth-card{text-align:left}.auth-card .eyebrow{text-align:center}.auth-card h1{text-align:center}.auth-card>.muted{text-align:center}
 .foot-logo{height:26px;width:auto;opacity:.75;margin-bottom:6px}
 @media (max-width:680px){.brand-logo{height:34px;max-width:128px}.login-logo{height:54px}}
+
+/* description editor */
+.desc-wrap{margin:14px 0}.desc-label{margin:0 0 6px}
+.fmt-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.fmt-bar button{min-height:38px;padding:6px 11px;border:1px solid var(--line);border-radius:9px;background:#f3f8fa;color:var(--navy);font-weight:700;font-size:14px;cursor:pointer}
+.fmt-bar button:hover{background:#e3f0f1;border-color:var(--teal)}
+#job-description{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:15px;line-height:1.55;min-height:220px}
+.job-preview ul.job-bullets,.job-preview ol.job-bullets{margin:0 0 12px;padding-left:22px}
+.job-preview .job-bullets li{margin:0 0 7px;color:var(--ink)}.job-preview .job-bullets li>.job-bullets{margin:6px 0 4px}
+.job-preview ul.job-sub{list-style:circle}.job-preview strong{color:var(--navy)}.job-preview p{color:var(--ink)}
+.job-preview h4{margin:16px 0 6px;font-size:17px;color:var(--navy)}
