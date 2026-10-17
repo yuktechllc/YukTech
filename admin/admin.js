@@ -259,7 +259,7 @@
     rows.forEach(row => {
       const card = document.createElement('article'); card.className = 'record';
       const when = row.published_at ? ' · Posted ' + new Date(row.published_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '';
-      card.innerHTML = `<div><h3>${esc(row.title)}</h3><p>${statusTag(row.status)} ${esc(row.location)} · ${esc(row.work_type)}${row.experience ? ' · ' + esc(row.experience) : ''}${esc(when)}</p><p>${esc((row.description || '').replace(/\s+/g, ' ').slice(0, 140))}…</p></div><div class="record-actions">${
+      card.innerHTML = `<div><h3>${esc(row.title)}</h3><p>${statusTag(row.status)} ${esc(row.location)} · ${esc(row.work_type)}${row.experience ? ' · ' + esc(row.experience) : ''}${esc(when)}</p><p>${esc(descText(row.description).slice(0, 140))}…</p></div><div class="record-actions">${
         canEdit() ? '<button class="small-btn" data-edit type="button">Edit</button>' : ''}${
         canEdit() ? '<button class="small-btn" data-dup type="button">Duplicate</button>' : ''}${
         canEdit() && ['draft', 'rejected'].includes(row.status) && !canReview() ? '<button class="small-btn publish" data-submit type="button">Submit for review</button>' : ''}${
@@ -304,16 +304,17 @@
     $('#job-supersedes-id').value = live ? row.id : (isCopy ? '' : (row?.supersedes_id || ''));
     $('#job-title').value = row?.title || ''; fillDepartments(row?.department || ''); $('#job-location').value = row?.location || '';
     $('#job-work-type').value = row?.work_type || 'Full-time'; $('#job-experience').value = row?.experience || ''; $('#job-board').value = row?.external_board || 'website';
-    $('#job-description').value = row?.description || ''; $('#job-apply-url').value = row?.apply_url || '';
+    setEditor(row?.description); $('#job-apply-url').value = row?.apply_url || '';
     form.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
   function jobPayload() {
-    return { title: $('#job-title').value.trim(), department: departmentValue() || 'Technology', location: $('#job-location').value.trim(), work_type: $('#job-work-type').value, experience: $('#job-experience').value.trim(), external_board: $('#job-board').value, description: $('#job-description').value.trim(), apply_url: $('#job-apply-url').value.trim(), supersedes_id: $('#job-supersedes-id').value || null };
+    return { title: $('#job-title').value.trim(), department: departmentValue() || 'Technology', location: $('#job-location').value.trim(), work_type: $('#job-work-type').value, experience: $('#job-experience').value.trim(), external_board: $('#job-board').value, description: editorHtml(), apply_url: $('#job-apply-url').value.trim(), supersedes_id: $('#job-supersedes-id').value || null };
   }
   async function saveJob(e) {
     e.preventDefault();
     const mode = (e.submitter && e.submitter.dataset.mode) || 'draft';
     const p = jobPayload();
+    if (!editorHasText()) { say('Please add a job description.', true); ed().focus(); return; }
     if (p.apply_url && !httpUrl(p.apply_url) && !/^mailto:/i.test(p.apply_url)) { say('Application URL must start with https://', true); return; }
     const id = $('#job-id').value; const payload = { ...p, status: 'draft', updated_by: currentUser.id };
     let res, savedId = id;
@@ -331,7 +332,7 @@
     const h = document.createElement('h3'); h.textContent = p.title || 'Job title'; box.append(h);
     const ul = document.createElement('ul'); ul.className = 'pv-chips';
     [p.location, p.work_type, p.department, p.experience].filter(Boolean).forEach(c => { const li = document.createElement('li'); li.textContent = c; ul.append(li); }); box.append(ul);
-    box.append(formatDescription(p.description));
+    box.append(renderJobBody(p.description));
   }
 
   /* Turns the description text into headings, bold text, bullet lists (with sub-bullets) and paragraphs.
@@ -366,72 +367,92 @@
     return frag;
   }
 
-  /* ---- formatting toolbar + smart paste for the description box ---- */
-  const BULLET_RE = /^([ \t]*)([-•*–▪◦●○]|\d{1,2}[.)])[ \t]+/;
-  function editLines(fn) {
-    const t = $('#job-description'); const v = t.value;
-    const start = v.lastIndexOf('\n', t.selectionStart - 1) + 1; let end = v.indexOf('\n', t.selectionEnd); if (end < 0) end = v.length;
-    const out = v.slice(start, end).split('\n').map(fn).join('\n');
-    t.setRangeText(out, start, end, 'select'); t.focus(); t.dispatchEvent(new Event('input'));
-  }
-  function applyFormat(kind) {
-    const t = $('#job-description');
-    if (kind === 'bold') {
-      const s = t.selectionStart, e = t.selectionEnd, sel = t.value.slice(s, e);
-      if (/^\*\*.+\*\*$/.test(sel)) t.setRangeText(sel.slice(2, -2), s, e, 'select'); else t.setRangeText('**' + (sel || 'bold text') + '**', s, e, 'select');
-      t.focus(); return;
-    }
-    editLines(line => {
-      if (!line.trim()) return line;
-      const m = line.match(BULLET_RE);
-      if (kind === 'heading') return /^#{1,6}\s/.test(line) ? line.replace(/^#{1,6}\s+/, '') : '## ' + line.replace(BULLET_RE, '').replace(/^\s+/, '');
-      if (kind === 'bullet') return m ? line.replace(BULLET_RE, '') : '- ' + line.replace(/^#{1,6}\s+/, '').trim();
-      if (kind === 'number') return /^[ \t]*\d{1,2}[.)]/.test(line) ? line.replace(BULLET_RE, '') : '1. ' + line.replace(BULLET_RE, '').trim();
-      if (kind === 'sub') return m ? (m[1].length >= 4 ? line : '  ' + line) : '  - ' + line.trim();
-      if (kind === 'out') return line.replace(/^( {1,2}|\t)/, '');
-      return line;
+  /* ---- rich job description: safe HTML (allow-list). Used by the public Careers page AND the admin editor. ---- */
+  const DESC_TAGS = { P: 'p', H1: 'h4', H2: 'h4', H3: 'h4', H4: 'h4', H5: 'h5', H6: 'h5', UL: 'ul', OL: 'ol', LI: 'li', STRONG: 'strong', B: 'strong', EM: 'em', I: 'em', U: 'u', BR: 'br', A: 'a' };
+  const DESC_SKIP = /^(SCRIPT|STYLE|META|LINK|TITLE|HEAD|IFRAME|OBJECT|EMBED|SVG|FORM|INPUT|BUTTON|TEXTAREA|SELECT|NOSCRIPT)$/;
+  const looksLikeHtml = s => /^\s*<(p|h[1-6]|ul|ol|div|strong|b|em|i|u|br)\b/i.test(String(s || ''));
+  function sanitizeDescription(html) {
+    const doc = new DOMParser().parseFromString(String(html || ''), 'text/html'), out = document.createDocumentFragment();
+    const walk = (src, dest) => src.childNodes.forEach(n => {
+      if (n.nodeType === 3) { dest.append(document.createTextNode(n.nodeValue)); return; }
+      if (n.nodeType !== 1 || DESC_SKIP.test(n.tagName)) return;
+      const t = DESC_TAGS[n.tagName];
+      if (!t && (n.tagName === 'SPAN' || n.tagName === 'FONT')) {          // Word / Google Docs mark bold & italic with styles
+        const s = n.style || {}; let wrap = dest;
+        const w = s.fontWeight; if (w === 'bold' || parseInt(w, 10) >= 600) { const b = document.createElement('strong'); wrap.append(b); wrap = b; }
+        if (s.fontStyle === 'italic') { const i = document.createElement('em'); wrap.append(i); wrap = i; }
+        walk(n, wrap); return;
+      }
+      if (!t) { walk(n, dest); return; }                                      // unknown wrapper: keep its text, drop the tag
+      if (t === 'br') { dest.append(document.createElement('br')); return; }
+      if (t === 'a') {
+        const href = (n.getAttribute('href') || '').trim();
+        if (!/^(https?:|mailto:|tel:)/i.test(href)) { walk(n, dest); return; }
+        const a = document.createElement('a'); a.href = href; a.target = '_blank'; a.rel = 'noopener noreferrer'; walk(n, a); dest.append(a); return;
+      }
+      const el = document.createElement(t); walk(n, el); dest.append(el);
     });
+    walk(doc.body, out);
+    return tidyDescription(out);
   }
-  const BLOCK = /^(P|DIV|UL|OL|LI|H[1-6]|TABLE|TR|BLOCKQUOTE|SECTION|ARTICLE|PRE)$/;
-  function htmlToMarkup(html) {
-    const doc = new DOMParser().parseFromString(html.replace(/<!--[\s\S]*?-->/g, ''), 'text/html'); const lines = [];
-    const clean = s => s.replace(/[\u00a0\s]+/g, ' ');
-    const inlineOf = el => { let o = ''; el.childNodes.forEach(n => {
-      if (n.nodeType === 3) o += clean(n.nodeValue);
-      else if (n.nodeType === 1 && !/^(UL|OL)$/.test(n.tagName)) {
-        const inner = inlineOf(n); const w = (n.style && n.style.fontWeight) || '';
-        if (n.tagName === 'BR') o += ' ';
-        else if (/^(STRONG|B)$/.test(n.tagName) || w === 'bold' || parseInt(w, 10) >= 600) o += inner.trim() ? '**' + inner.trim() + '** ' : inner; else o += inner;
-      } }); return o.replace(/\*\*\s*\*\*/g, '').replace(/\s+/g, ' ').trim(); };
-    const walk = (node, depth) => node.childNodes.forEach(n => {
-      if (n.nodeType === 3) { const s = clean(n.nodeValue).trim(); if (s) lines.push(s); return; }
-      if (n.nodeType !== 1) return; const tag = n.tagName;
-      if (/^(SCRIPT|STYLE|META|HEAD)$/.test(tag)) return;
-      if (/^H[1-6]$/.test(tag)) { const s = inlineOf(n).replace(/\*\*/g, ''); if (s) lines.push('', '## ' + s, ''); return; }
-      if (tag === 'UL' || tag === 'OL') { let k = 0; n.childNodes.forEach(li => { if (li.nodeType !== 1 || li.tagName !== 'LI') return; k++;
-        const s = inlineOf(li); const pad = '  '.repeat(Math.min(depth, 2)); if (s) lines.push(pad + (tag === 'OL' ? k + '. ' : '- ') + s);
-        li.childNodes.forEach(c => { if (c.nodeType === 1 && /^(UL|OL)$/.test(c.tagName)) walk({ childNodes: [c] }, depth + 1); }); }); if (depth === 0) lines.push(''); return; }
-      if (BLOCK.test(tag) && ![...n.children].some(c => BLOCK.test(c.tagName))) { const s = inlineOf(n); if (s) lines.push(s, ''); return; }
-      walk(n, depth);
-    });
-    walk(doc.body, 0);
-    return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  function tidyDescription(frag) {
+    const box = document.createElement('div'); box.append(frag);
+    box.querySelectorAll('li > p').forEach(p => p.replaceWith(...p.childNodes));          // list items: no paragraph inside
+    box.querySelectorAll('h4 strong, h5 strong').forEach(s => s.replaceWith(...s.childNodes)); // headings are already bold
+    for (let pass = 0; pass < 3; pass++) box.querySelectorAll('p,li,strong,em,u,h4,h5,a,ul,ol').forEach(e => { if (!e.textContent.trim() && !e.querySelector('br,li')) e.remove(); });
+    const INLINE = /^(STRONG|EM|U|A|BR)$/; const kids = [...box.childNodes]; let run = [];
+    const flush = () => { if (run.some(n => n.nodeType !== 3 || n.nodeValue.trim())) { const p = document.createElement('p'); run[0].before(p); run.forEach(n => p.append(n)); } else run.forEach(n => n.remove()); run = []; };
+    kids.forEach(n => { if (n.nodeType === 3 || (n.nodeType === 1 && INLINE.test(n.tagName))) run.push(n); else flush(); }); flush();
+    return [...box.childNodes].reduce((f, n) => (f.append(n), f), document.createDocumentFragment());
   }
+  const fragToHtml = f => { const d = document.createElement('div'); d.append(f.cloneNode(true)); return d.innerHTML; };
+  const cleanHtml = html => fragToHtml(sanitizeDescription(html));
+  const renderJobBody = d => looksLikeHtml(d) ? sanitizeDescription(d) : formatDescription(d);
+  const descToHtml = d => fragToHtml(renderJobBody(d));
+  const descText = d => { const d2 = document.createElement('div'); d2.innerHTML = descToHtml(d).replace(/<\/(p|li|h4|h5|ul|ol)>|<br>/gi, ' $&'); return d2.textContent.replace(/\s+/g, ' ').trim(); };
+
+  /* ---- visual editor for the job description ---- */
+  const ed = () => $('#job-description');
+  const TEMPLATE = '<h4>About the role</h4><p>Briefly describe the role, the team and the client or project.</p><h4>Key responsibilities</h4><ul><li>Responsibility one</li><li>Responsibility two</li><li>Responsibility three</li></ul><h4>Required skills &amp; experience</h4><ul><li>Skill or qualification</li><li>Years of experience</li></ul><h4>Nice to have</h4><ul><li>Optional skill</li></ul><h4>What we offer</h4><ul><li>Benefit or growth opportunity</li></ul>';
+  let savedRange = null;
+  const inEditor = () => { const s = getSelection(); return s.rangeCount && ed().contains(s.anchorNode); };
+  function restoreRange() { if (!savedRange) return; const s = getSelection(); s.removeAllRanges(); s.addRange(savedRange); }
+  function syncToolbar() {
+    if (!inEditor()) return; savedRange = getSelection().getRangeAt(0).cloneRange();
+    $$('.rte-bar [data-cmd]').forEach(b => { if (/^(bold|italic|underline|insertUnorderedList|insertOrderedList)$/.test(b.dataset.cmd)) { let on = false; try { on = document.queryCommandState(b.dataset.cmd); } catch {} b.classList.toggle('on', on); } });
+    let v = ''; try { v = String(document.queryCommandValue('formatBlock') || '').toLowerCase().replace(/\s/g, ''); } catch {}
+    $('#rte-block').value = /^(h1|h2|h3|h4|heading[1-4])$/.test(v) ? 'h4' : /^(h5|h6|heading[56])$/.test(v) ? 'h5' : 'p';
+  }
+  function setEditor(desc) { ed().innerHTML = desc ? descToHtml(desc) : ''; }
+  const editorHtml = () => cleanHtml(ed().innerHTML);
+  const editorHasText = () => !!ed().textContent.trim();
   function bindDescriptionTools() {
-    $$('.fmt-bar [data-fmt]').forEach(b => b.addEventListener('mousedown', e => e.preventDefault()));
-    $$('.fmt-bar [data-fmt]').forEach(b => b.addEventListener('click', () => applyFormat(b.dataset.fmt)));
-    const t = $('#job-description');
-    t.addEventListener('paste', e => {
-      const html = e.clipboardData && e.clipboardData.getData('text/html');
-      if (!html || !/<(ul|ol|li|h[1-6]|strong|b|p)[\s>]/i.test(html)) return;      // plain text: let the browser paste normally
-      const md = htmlToMarkup(html); if (!md) return;
-      e.preventDefault(); t.setRangeText(md, t.selectionStart, t.selectionEnd, 'end'); t.dispatchEvent(new Event('input'));
+    const e = ed(); try { document.execCommand('defaultParagraphSeparator', false, 'p'); } catch {}
+    $$('.rte-bar button, .rte-bar select').forEach(b => { if (b.tagName === 'BUTTON') b.addEventListener('mousedown', ev => ev.preventDefault()); });
+    $$('.rte-bar [data-cmd]').forEach(b => b.addEventListener('click', () => { e.focus(); restoreRange(); document.execCommand(b.dataset.cmd, false, null); syncToolbar(); }));
+    $('#rte-block').addEventListener('change', ev => { e.focus(); restoreRange(); document.execCommand('formatBlock', false, ev.target.value === 'p' ? 'p' : ev.target.value); syncToolbar(); });
+    $$('.rte-bar [data-act]').forEach(b => b.addEventListener('click', () => {
+      e.focus(); restoreRange();
+      if (b.dataset.act === 'link') {
+        const url = (prompt('Link address (must start with https://)', 'https://') || '').trim(); if (!url) return;
+        if (!/^(https?:\/\/|mailto:|tel:)/i.test(url)) { say('The link must start with https://', true); return; }
+        document.execCommand('createLink', false, url);
+      } else if (b.dataset.act === 'clear') {
+        document.execCommand('removeFormat'); document.execCommand('unlink'); document.execCommand('formatBlock', false, 'p');
+      } else if (b.dataset.act === 'template') {
+        if (editorHasText() && !confirm('Add the standard job layout at the end of your text?')) return;
+        e.insertAdjacentHTML('beforeend', TEMPLATE);
+      }
+      syncToolbar(); e.dispatchEvent(new Event('input'));
+    }));
+    e.addEventListener('paste', ev => {                                    // keep structure, drop fonts/colours/styles
+      ev.preventDefault(); const cd = ev.clipboardData; const html = cd.getData('text/html'), text = cd.getData('text/plain');
+      const out = html && /<[a-z][\s\S]*>/i.test(html) ? cleanHtml((html.match(/<body[^>]*>([\s\S]*)<\/body>/i) || [0, html])[1]) : fragToHtml(formatDescription(text));
+      document.execCommand('insertHTML', false, out);
     });
-    let timer; t.addEventListener('input', () => { if ($('#job-preview').hidden) return; clearTimeout(timer); timer = setTimeout(previewJob, 400); });
-    t.addEventListener('keydown', e => {                       // Tab / Shift+Tab indent bullets
-      if (e.key !== 'Tab') return; const line = t.value.slice(t.value.lastIndexOf('\n', t.selectionStart - 1) + 1).split('\n')[0];
-      if (!BULLET_RE.test(line)) return; e.preventDefault(); applyFormat(e.shiftKey ? 'out' : 'sub');
-    });
+    e.addEventListener('keydown', ev => { if (ev.key === 'Tab' && document.queryCommandState('insertUnorderedList') || ev.key === 'Tab' && document.queryCommandState('insertOrderedList')) { ev.preventDefault(); document.execCommand(ev.shiftKey ? 'outdent' : 'indent'); } });
+    document.addEventListener('selectionchange', syncToolbar);
+    let timer; e.addEventListener('input', () => { if ($('#job-preview').hidden) return; clearTimeout(timer); timer = setTimeout(previewJob, 500); });
   }
   async function submitForReview(id) { const { error } = await sb.from('job_posts').update({ status: 'in_review', updated_by: currentUser.id }).eq('id', id); if (error) { say(error.message, true); return; } say('Submitted for review.'); await Promise.all([loadJobs(), loadStats()]); }
   async function publishJob(id) {
@@ -521,7 +542,7 @@
     if (!rows.length) { list.textContent = 'The review queue is empty.'; return; }
     rows.forEach(row => {
       const card = document.createElement('article'); card.className = 'record'; const job = row._t === 'job_posts';
-      card.innerHTML = `<div><h3>${job ? 'Job: ' + esc(row.title) : 'Text: ' + esc(row.content_key)}</h3><p>${statusTag(row.status)}</p><p>${esc((job ? `${row.location} · ${row.work_type}\n${row.description}` : row.content_value).slice(0, 600))}</p></div><div class="record-actions"><button class="small-btn publish" data-p type="button">Approve &amp; publish</button><button class="small-btn reject" data-r type="button">Reject</button></div>`;
+      card.innerHTML = `<div><h3>${job ? 'Job: ' + esc(row.title) : 'Text: ' + esc(row.content_key)}</h3><p>${statusTag(row.status)}</p><p>${esc((job ? `${row.location} · ${row.work_type}\n${descText(row.description)}` : row.content_value).slice(0, 600))}</p></div><div class="record-actions"><button class="small-btn publish" data-p type="button">Approve &amp; publish</button><button class="small-btn reject" data-r type="button">Reject</button></div>`;
       $('[data-p]', card).onclick = async () => { if (job) await publishJob(row.id); else await approveContent(row.id); loadReview(); };
       $('[data-r]', card).onclick = async () => { if (job) await rejectJob(row.id); else { await sb.from('cms_content').update({ status: 'rejected', updated_by: currentUser.id }).eq('id', row.id); say('Returned as rejected.'); } loadReview(); };
       list.append(card);

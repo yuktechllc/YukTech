@@ -104,7 +104,50 @@
     });
     return frag;
   }
-  const excerptOf = t => { const s = String(t || '').replace(/\*\*/g, '').replace(/^\s*#{1,6}\s+/gm, '').replace(/^\s*([-•*–▪◦●○]|\d{1,2}[.)])\s+/gm, '').replace(/\s+/g, ' ').trim(); return s.length > 190 ? s.slice(0, 187).trimEnd() + '…' : s; };
+  /* ---- rich job description: safe HTML (allow-list). Used by the public Careers page AND the admin editor. ---- */
+  const DESC_TAGS = { P: 'p', H1: 'h4', H2: 'h4', H3: 'h4', H4: 'h4', H5: 'h5', H6: 'h5', UL: 'ul', OL: 'ol', LI: 'li', STRONG: 'strong', B: 'strong', EM: 'em', I: 'em', U: 'u', BR: 'br', A: 'a' };
+  const DESC_SKIP = /^(SCRIPT|STYLE|META|LINK|TITLE|HEAD|IFRAME|OBJECT|EMBED|SVG|FORM|INPUT|BUTTON|TEXTAREA|SELECT|NOSCRIPT)$/;
+  const looksLikeHtml = s => /^\s*<(p|h[1-6]|ul|ol|div|strong|b|em|i|u|br)\b/i.test(String(s || ''));
+  function sanitizeDescription(html) {
+    const doc = new DOMParser().parseFromString(String(html || ''), 'text/html'), out = document.createDocumentFragment();
+    const walk = (src, dest) => src.childNodes.forEach(n => {
+      if (n.nodeType === 3) { dest.append(document.createTextNode(n.nodeValue)); return; }
+      if (n.nodeType !== 1 || DESC_SKIP.test(n.tagName)) return;
+      const t = DESC_TAGS[n.tagName];
+      if (!t && (n.tagName === 'SPAN' || n.tagName === 'FONT')) {          // Word / Google Docs mark bold & italic with styles
+        const s = n.style || {}; let wrap = dest;
+        const w = s.fontWeight; if (w === 'bold' || parseInt(w, 10) >= 600) { const b = document.createElement('strong'); wrap.append(b); wrap = b; }
+        if (s.fontStyle === 'italic') { const i = document.createElement('em'); wrap.append(i); wrap = i; }
+        walk(n, wrap); return;
+      }
+      if (!t) { walk(n, dest); return; }                                      // unknown wrapper: keep its text, drop the tag
+      if (t === 'br') { dest.append(document.createElement('br')); return; }
+      if (t === 'a') {
+        const href = (n.getAttribute('href') || '').trim();
+        if (!/^(https?:|mailto:|tel:)/i.test(href)) { walk(n, dest); return; }
+        const a = document.createElement('a'); a.href = href; a.target = '_blank'; a.rel = 'noopener noreferrer'; walk(n, a); dest.append(a); return;
+      }
+      const el = document.createElement(t); walk(n, el); dest.append(el);
+    });
+    walk(doc.body, out);
+    return tidyDescription(out);
+  }
+  function tidyDescription(frag) {
+    const box = document.createElement('div'); box.append(frag);
+    box.querySelectorAll('li > p').forEach(p => p.replaceWith(...p.childNodes));          // list items: no paragraph inside
+    box.querySelectorAll('h4 strong, h5 strong').forEach(s => s.replaceWith(...s.childNodes)); // headings are already bold
+    for (let pass = 0; pass < 3; pass++) box.querySelectorAll('p,li,strong,em,u,h4,h5,a,ul,ol').forEach(e => { if (!e.textContent.trim() && !e.querySelector('br,li')) e.remove(); });
+    const INLINE = /^(STRONG|EM|U|A|BR)$/; const kids = [...box.childNodes]; let run = [];
+    const flush = () => { if (run.some(n => n.nodeType !== 3 || n.nodeValue.trim())) { const p = document.createElement('p'); run[0].before(p); run.forEach(n => p.append(n)); } else run.forEach(n => n.remove()); run = []; };
+    kids.forEach(n => { if (n.nodeType === 3 || (n.nodeType === 1 && INLINE.test(n.tagName))) run.push(n); else flush(); }); flush();
+    return [...box.childNodes].reduce((f, n) => (f.append(n), f), document.createDocumentFragment());
+  }
+  const fragToHtml = f => { const d = document.createElement('div'); d.append(f.cloneNode(true)); return d.innerHTML; };
+  const cleanHtml = html => fragToHtml(sanitizeDescription(html));
+  const renderJobBody = d => looksLikeHtml(d) ? sanitizeDescription(d) : formatDescription(d);
+  const descToHtml = d => fragToHtml(renderJobBody(d));
+  const descText = d => { const d2 = document.createElement('div'); d2.innerHTML = descToHtml(d).replace(/<\/(p|li|h4|h5|ul|ol)>|<br>/gi, ' $&'); return d2.textContent.replace(/\s+/g, ' ').trim(); };
+  const excerptOf = t => { const s = descText(t); return s.length > 190 ? s.slice(0, 187).trimEnd() + '…' : s; };
 
   async function applyJobs(){
     const host = document.querySelector('[data-jobs-list]'); if (!host) return;
@@ -120,7 +163,7 @@
       const chips = el('ul', 'job-chips');
       [job.location, job.work_type, job.department, job.experience && (/\d/.test(job.experience) && !/year|yr/i.test(job.experience) ? job.experience + ' yrs exp' : job.experience)].filter(Boolean).forEach(c => chips.append(el('li', null, c)));
       const excerpt = el('p', 'job-excerpt', excerptOf(job.description));
-      const details = el('div', 'job-details'); details.hidden = true; details.append(formatDescription(job.description));
+      const details = el('div', 'job-details'); details.hidden = true; details.append(renderJobBody(job.description));
       main.append(head, chips, excerpt, details);
 
       const side = el('div', 'job-card-side');
@@ -133,7 +176,7 @@
       toggle.addEventListener('click', () => setOpen(details.hidden));
       side.append(apply, toggle);
       card.append(main, side); host.append(card);
-      return {job, card, setOpen, hay: [job.title, job.location, job.department, job.work_type, job.description].join(' ').toLowerCase()};
+      return {job, card, setOpen, hay: [job.title, job.location, job.department, job.work_type, descText(job.description)].join(' ').toLowerCase()};
     });
 
     /* toolbar: search + filters (shown when there are 3 or more openings) */

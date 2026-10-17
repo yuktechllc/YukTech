@@ -96,17 +96,33 @@
             <label>Work type<select id="job-work-type"><option>Full-time</option><option>Contract</option><option>Part-time</option><option>Internship</option></select></label>
             <label>Experience<input id="job-experience" placeholder="3–5 years"></label>
             <label>Also advertised on<select id="job-board"><option value="website">YUKTECH website only</option><option value="linkedin">LinkedIn</option><option value="indeed">Indeed</option><option value="naukri">Naukri</option><option value="other">Other / ATS</option></select></label>
-            <div class="full desc-wrap"><label for="job-description" class="desc-label">Job description</label>
-              <div class="fmt-bar" role="toolbar" aria-label="Formatting">
-                <button type="button" data-fmt="heading" title="Section heading"><b>H</b> Heading</button>
-                <button type="button" data-fmt="bold" title="Bold"><b>B</b></button>
-                <button type="button" data-fmt="bullet" title="Bullet point">• Bullet</button>
-                <button type="button" data-fmt="sub" title="Sub-bullet (indent)">◦ Sub-bullet</button>
-                <button type="button" data-fmt="out" title="Outdent">⇤</button>
-                <button type="button" data-fmt="number" title="Numbered list">1. List</button>
+            <div class="full desc-wrap">
+              <span class="desc-label" id="desc-label">Job description</span>
+              <div class="rte">
+                <div class="rte-bar" role="toolbar" aria-label="Text formatting">
+                  <select id="rte-block" aria-label="Text style"><option value="p">Normal text</option><option value="h4">Heading</option><option value="h5">Subheading</option></select>
+                  <span class="rte-sep"></span>
+                  <button type="button" data-cmd="bold" title="Bold (Ctrl+B)" aria-label="Bold"><b>B</b></button>
+                  <button type="button" data-cmd="italic" title="Italic (Ctrl+I)" aria-label="Italic"><i>I</i></button>
+                  <button type="button" data-cmd="underline" title="Underline (Ctrl+U)" aria-label="Underline"><u>U</u></button>
+                  <span class="rte-sep"></span>
+                  <button type="button" data-cmd="insertUnorderedList" title="Bullet list" aria-label="Bullet list">• List</button>
+                  <button type="button" data-cmd="insertOrderedList" title="Numbered list" aria-label="Numbered list">1. List</button>
+                  <button type="button" data-cmd="indent" title="Indent (make a sub-bullet)" aria-label="Indent">⇥</button>
+                  <button type="button" data-cmd="outdent" title="Outdent" aria-label="Outdent">⇤</button>
+                  <span class="rte-sep"></span>
+                  <button type="button" data-act="link" title="Add link" aria-label="Add link">🔗 Link</button>
+                  <button type="button" data-cmd="unlink" title="Remove link" aria-label="Remove link">Unlink</button>
+                  <button type="button" data-act="clear" title="Clear formatting" aria-label="Clear formatting">Clear</button>
+                  <span class="rte-sep"></span>
+                  <button type="button" data-cmd="undo" title="Undo (Ctrl+Z)" aria-label="Undo">↶</button>
+                  <button type="button" data-cmd="redo" title="Redo (Ctrl+Y)" aria-label="Redo">↷</button>
+                  <span class="rte-sep"></span>
+                  <button type="button" data-act="template" title="Insert a standard job layout">Template</button>
+                </div>
+                <div id="job-description" class="rte-body" contenteditable="true" role="textbox" aria-multiline="true" aria-labelledby="desc-label" data-placeholder="Write or paste the job description here…"></div>
               </div>
-              <textarea id="job-description" rows="14" required placeholder="## About the role&#10;Short intro paragraph.&#10;&#10;## Key Responsibilities&#10;- **Talent Acquisition**&#10;  - Source and screen candidates&#10;  - Build a talent pipeline&#10;&#10;## Requirements&#10;- 3+ years of experience"></textarea>
-              <small class="help">Select lines and use the buttons above. <b>Pasting from Word, Google Docs or ChatGPT keeps the headings, bold text and bullets automatically.</b> Check the result with Preview.</small>
+              <small class="help">Format it just like a Word document. <b>Pasting from Word, Google Docs or ChatGPT keeps headings, bold text and bullets</b> (colours and fonts are removed so it matches your website). Press <b>Preview</b> to see how it will look on the Careers page.</small>
             </div>
             <label class="full">Application URL (optional)<input id="job-apply-url" type="url" inputmode="url" placeholder="Leave blank to use the YUKTECH application form"></label>
           </div>

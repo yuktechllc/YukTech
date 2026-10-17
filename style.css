@@ -803,3 +803,8 @@ input, select, textarea, button { max-width:100%; }
 .job-details ul.job-sub{list-style:circle}
 .job-details h4{padding-top:4px}
 .job-details h4:first-child{margin-top:0}
+
+.job-details h5{margin:14px 0 6px;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--teal-dark)}
+.job-details em{font-style:italic}.job-details u{text-underline-offset:2px}
+.job-details a{color:var(--teal-dark);text-decoration:underline}
+.job-details li>p{margin:0}
