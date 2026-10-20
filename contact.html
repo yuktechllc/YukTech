@@ -27,18 +27,18 @@
         <span class="eyebrow" data-cms-key="contact.s2.span1">SEND AN ENQUIRY</span>
         <h2 data-cms-key="contact.s2.h21">How can we help?</h2>
         <p class="form-intro" data-cms-key="contact.s2.p1">Complete the form below and share a few details about your requirement. All fields marked with * are mandatory.</p>
-        <form class="contact-form" id="contactForm" action="https://formsubmit.co/aneeshjain2014@gmail.com" method="POST" enctype="multipart/form-data">
+        <form class="contact-form" id="enquiryForm" action="https://formsubmit.co/aneeshjain2014@gmail.com" method="POST" enctype="multipart/form-data">
           <input type="hidden" name="_subject" value="New YUKTECH Website Enquiry">
           <input type="hidden" name="_template" value="table">
-          <input type="hidden" name="_next" value="https://yuktech.netlify.app/contact-thank-you.html">
+          <input type="hidden" name="_next" id="enquiryNext" value="">
           <input type="text" name="_honey" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px">
           <div class="form-row">
-            <label for="contactName">Full Name <span class="required-mark">*</span><input id="contactName" name="name" type="text" autocomplete="name" placeholder="Your full name" required maxlength="100"></label>
+            <label for="contactName">Full Name <span class="required-mark">*</span><input id="contactName" name="Full Name" type="text" autocomplete="name" placeholder="Your full name" required maxlength="100"></label>
             <label for="contactEmail">Email <span class="required-mark">*</span><input id="contactEmail" name="email" type="email" autocomplete="email" placeholder="you@company.com" required maxlength="150"></label>
           </div>
-          <label for="contactPhone">Phone Number <span class="required-mark">*</span><input id="contactPhone" name="phone" type="tel" autocomplete="tel" placeholder="Your phone number" required maxlength="40"></label>
+          <label for="contactPhone">Phone Number <span class="required-mark">*</span><input id="contactPhone" name="Phone" type="tel" autocomplete="tel" placeholder="Your phone number" required maxlength="40"></label>
           <label for="contactService">What are you enquiring about? <span class="required-mark">*</span>
-            <select id="contactService" name="service" required>
+            <select id="contactService" name="Enquiry Type" required>
               <option value="" selected disabled>Select a service</option>
               <option>IT Staffing</option>
               <option>IT Solutions / Project Requirements</option>
@@ -47,10 +47,11 @@
               <option>General Enquiry</option>
             </select>
           </label>
-          <label for="contactMessage">Tell Us About Your Requirement <span class="required-mark">*</span><textarea id="contactMessage" name="message" rows="6" placeholder="Briefly describe your business need, skills or technologies involved, and timeline if known." required minlength="10" maxlength="5000"></textarea></label>
-          <label for="contactAttachment">Upload Document<input id="contactAttachment" name="attachment" type="file" accept=".pdf,.doc,.docx,.rtf,.txt,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png" aria-describedby="attachmentHelp"><small id="attachmentHelp" class="file-help">Candidates may attach a resume; businesses may attach a project brief or other supporting document. Accepted formats: PDF, Word, Excel, PowerPoint, text and common image files. Maximum file size: 10 MB.</small></label>
+          <label for="contactMessage">Tell Us About Your Requirement <span class="required-mark">*</span><textarea id="contactMessage" name="Message" rows="6" placeholder="Briefly describe your business need, skills or technologies involved, and timeline if known." required minlength="10" maxlength="5000"></textarea></label>
+          <label for="contactAttachment">Upload Document<input id="contactAttachment" name="attachment" type="file" accept=".pdf,.doc,.docx,.rtf,.txt,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png" aria-describedby="attachmentHelp"><small id="attachmentHelp" class="file-help">Candidates may attach a resume; businesses may attach a project brief or other supporting document. Accepted formats: PDF, Word, Excel, PowerPoint, text and common image files. Maximum file size: 5 MB.</small></label>
           <label class="consent" for="contactConsent"><input id="contactConsent" name="consent" type="checkbox" value="Agreed" required><span>I agree that YUKTECH may use the information I provide to respond to this enquiry. Please do not include sensitive personal or confidential information.</span></label>
-          <button class="btn btn-primary form-submit" type="submit">Submit Enquiry <span aria-hidden="true">→</span></button>
+          <p id="enquiryError" class="apply-error" role="alert" hidden></p>
+          <button class="btn btn-primary form-submit" id="enquirySubmit" type="submit">Submit Enquiry <span aria-hidden="true">→</span></button>
           <p class="form-note" data-cms-key="contact.s2.p2">This form is routed through FormSubmit to info@yuktech.net. The first submission may require the inbox owner to confirm activation with the form service.</p>
         </form>
       </div>
@@ -70,4 +71,4 @@ Noida, Uttar Pradesh 201309, India</p><p class="office-phone"><span class="offic
   </section>
 </main><footer class="site-footer"><div class="container footer-main"><div class="footer-brand-area"><a class="footer-brand" href="index.html" aria-label="YUKTECH home"><img data-cms-image="site.logo" src="./Images/YUK.png" alt="YUKTECH logo" loading="lazy"></a><p data-site-text="site.footer.tagline">IT Staffing · IT Solutions · IT Consulting.</p></div><div class="footer-socials" aria-label="YUKTECH social media"><span class="footer-social-heading">Connect with us</span><a class="social-icon-link email-icon-link" href="mailto:aneeshjain2014@gmail.com
   " data-site-href="site.email" data-site-scheme="mailto:" aria-label="Email YUKTECH" title="Email YUKTECH"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 5.5h18v13H3z"/><path d="m3.5 6 8.5 7 8.5-7"/></svg></a><a class="social-icon-link linkedin-icon-link" href="https://www.linkedin.com/company/yuktech/home/" data-site-href="site.linkedin" target="_blank" rel="noopener noreferrer" aria-label="Visit YUKTECH on LinkedIn (opens in a new tab)" title="YUKTECH on LinkedIn"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5.2 8.4H2.1V22h3.1V8.4ZM3.65 2A1.82 1.82 0 1 0 3.7 5.64 1.82 1.82 0 0 0 3.65 2ZM22 13.9c0-4.1-2.2-6-5.1-6a4.4 4.4 0 0 0-3.9 2.15V8.4H9.9V22H13v-6.74c0-1.78.34-3.5 2.55-3.5 2.18 0 2.2 2.03 2.2 3.62V22H22v-8.1Z"/></svg></a></div></div><div class="container footer-quick-links" aria-label="Quick links"><a href="employers.html">For Businesses</a><a href="candidates.html">Candidates</a><a href="careers.html">Careers</a></div>
-<div class="container footer-bottom"><p>© <span id="currentYear">2026</span> <span data-site-text="site.company.name">YUKTECH</span>. All rights reserved.</p><p data-site-text="site.footer.motto">People × Process × Technology.</p></div></footer><button class="back-to-top" id="backToTop" type="button" aria-label="Back to top" hidden>↑</button><script src="./cms-config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="./assets/yuktech-cms.js" defer></script></body></html>
+<div class="container footer-bottom"><p>© <span id="currentYear">2026</span> <span data-site-text="site.company.name">YUKTECH</span>. All rights reserved.</p><p data-site-text="site.footer.motto">People × Process × Technology.</p></div></footer><button class="back-to-top" id="backToTop" type="button" aria-label="Back to top" hidden>↑</button><script src="./cms-config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="./assets/yuktech-cms.js" defer></script><script src="./assets/contact-form.js" defer></script></body></html>
