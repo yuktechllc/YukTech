@@ -808,3 +808,73 @@ input, select, textarea, button { max-width:100%; }
 .job-details em{font-style:italic}.job-details u{text-underline-offset:2px}
 .job-details a{color:var(--teal-dark);text-decoration:underline}
 .job-details li>p{margin:0}
+
+
+/* --- Requested refinements --- */
+/* About: center the "Connected thinking..." line under the pillars heading */
+.about-pillars-intro{max-width:760px;margin-inline:auto;text-align:center}
+.about-pillars-intro h2,.about-pillars-intro p{margin-inline:auto;text-align:center;text-align-last:center}
+.about-pillars-intro p{max-width:620px}
+@media (max-width:768px){.about-pillars-intro,.about-pillars-intro h2,.about-pillars-intro p{text-align:center;text-align-last:center}}
+
+/* CTA blocks on light background: dark, readable text */
+.cta-light .cta-inner h2{color:var(--navy)}
+.cta-light .cta-inner p{color:var(--text)}
+.cta-light .cta-inner .eyebrow{color:var(--teal-dark)}
+
+/* Contact sidebar "Looking for opportunities?": same blue as the panel, no box, lighter text */
+.contact-sidebar .sidebar-callout{margin-top:15px;padding:20px 0 0;border:0!important;border-top:1px solid rgba(255,255,255,.22)!important;border-radius:0;background:transparent!important;box-shadow:none!important}
+.contact-sidebar .sidebar-callout strong{color:#fff;font-size:15px;font-weight:800}
+.contact-sidebar .sidebar-callout p{margin:6px 0 10px;color:#F2F7FA!important;font-size:13px;line-height:1.8}
+.contact-sidebar .sidebar-callout a{color:#BFF1EE;font-size:13px;font-weight:700;background:transparent}
+.contact-sidebar .sidebar-callout a:hover{color:#fff}
+
+/* Consistent professional typography across all public pages.
+   Left alignment avoids stretched spaces; words wrap naturally without hyphenation. */
+main p,
+main li,
+main .form-note,
+main .hero-note {
+  text-align: left !important;
+  text-align-last: left !important;
+  text-justify: auto !important;
+  hyphens: none !important;
+  -webkit-hyphens: none !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+  word-spacing: normal !important;
+  letter-spacing: normal !important;
+  line-height: 1.7 !important;
+}
+
+/* Keep regular body copy comfortably readable without enlarging compact card labels. */
+main p {
+  font-size: 16px;
+}
+
+/* Avoid long URLs or unbroken tokens creating horizontal overflow. */
+main p a,
+main li a {
+  overflow-wrap: anywhere;
+}
+
+/* Preserve intentionally centred intro and decorative text. */
+main .section:has(.pillar-card) .section-intro p,
+main .section:has(.approach-grid) .section-intro p,
+main .section:has(.capability-grid) .section-intro p,
+main .about-pillars-intro p,
+main .section-intro .business-requirement-description,
+main .hero-card p,
+main .candidate-visual > p,
+main .center-action p {
+  text-align: center !important;
+  text-align-last: center !important;
+  text-wrap: balance;
+}
+
+/* Navigation/breadcrumb labels are not body copy. */
+main .breadcrumbs,
+main .breadcrumbs * {
+  text-align: left;
+  text-align-last: auto;
+}

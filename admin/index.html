@@ -148,26 +148,10 @@
     <section class="tab-panel" id="tab-more" hidden>
       <div class="card"><h2>More tools</h2><p class="muted">Occasional tasks. You do not need these for everyday updates.</p>
         <div class="quick-grid">
-          <button class="quick" data-go="pages" type="button"><span class="qi">¶</span><b>Page text</b><small>Edit headings and paragraphs</small></button>
           <button class="quick" data-go="media" type="button"><span class="qi">▣</span><b>Image library</b><small>Upload and copy image links</small></button>
           <button class="quick reviewer-only" data-go="review" type="button"><span class="qi">✓</span><b>Review queue</b><small>Approve or reject changes</small></button>
           <button class="quick admin-only" data-go="users" type="button"><span class="qi">☺</span><b>User access</b><small>Give someone a role</small></button>
         </div>
-      </div>
-    </section>
-
-    <section class="tab-panel" id="tab-pages" hidden>
-      <div class="card"><div class="section-heading"><div><h2>Page text</h2><p class="muted">Pick a page, then tap any field to edit it.</p></div><button class="btn ghost" data-go="more" type="button">← Back</button></div>
-        <label>Page<select id="page-picker"><option value="">Choose a page…</option><option value="index">Home</option><option value="about">About</option><option value="services">Services</option><option value="staffing-workforce">IT Staffing</option><option value="it-solutions">IT Solutions</option><option value="it-consulting">IT Consulting</option><option value="employers">For Businesses</option><option value="candidates">Candidates</option><option value="careers">Careers</option><option value="contact">Contact</option><option value="software-engineering">Software Engineering</option><option value="cloud-solutions">Cloud Solutions</option><option value="data-analytics">Data &amp; Analytics</option><option value="enterprise-applications">Enterprise Applications</option></select></label>
-        <div id="page-fields" class="record-list"></div>
-        <form id="content-form" class="editor-form" hidden>
-          <input type="hidden" id="content-id">
-          <label>Field<input id="content-key" required pattern="[a-zA-Z0-9._-]+" readonly></label>
-          <label>Type<select id="content-type"><option value="text">Text</option><option value="url">Link (URL)</option><option value="image_url">Image URL</option></select></label>
-          <label>Value<textarea id="content-value" rows="5" required></textarea></label>
-          <div class="actions"><button type="submit" class="btn primary" data-mode="publish" id="content-publish" hidden>Save &amp; publish</button><button type="submit" class="btn secondary" data-mode="draft">Save draft</button><button type="button" id="cancel-content" class="btn ghost">Cancel</button></div>
-        </form>
-        <div id="content-list" class="record-list" hidden></div>
       </div>
     </section>
 

@@ -56,15 +56,15 @@
     $$('.reviewer-only').forEach(el => el.hidden = !canReview());
     $('#new-job').hidden = !canEdit();
     $('#job-publish-btn').hidden = !canReview();
-    $('#content-publish').hidden = !canReview();
+    const cp = $('#content-publish'); if (cp) cp.hidden = !canReview();
     bindOnce();
     await Promise.all([loadJobs(), loadStats()]);
     switchTab('overview');
   }
 
   /* ================= navigation ================= */
-  const TITLES = { overview: 'Dashboard', contact: 'Contact & links', brand: 'Logo & founder', jobs: 'Job postings', more: 'More tools', pages: 'Page text', media: 'Image library', review: 'Review queue', users: 'User access' };
-  const NAV_FOR = { pages: 'more', media: 'more', review: 'more', users: 'more' };
+  const TITLES = { overview: 'Dashboard', contact: 'Contact & links', brand: 'Logo & founder', jobs: 'Job postings', more: 'More tools', media: 'Image library', review: 'Review queue', users: 'User access' };
+  const NAV_FOR = { media: 'more', review: 'more', users: 'more' };
   function switchTab(name) {
     if ((name === 'contact' || name === 'brand') && !isAdmin()) { say('Only an administrator can change site details.', true); name = 'overview'; }
     $$('.tab-panel').forEach(p => p.hidden = p.id !== `tab-${name}`);
@@ -94,10 +94,7 @@
     $('#job-search').addEventListener('input', renderJobs);
     $('#job-department').addEventListener('change', () => { const o = $('#job-department').value === OTHER; $('#job-department-other').hidden = !o; if (o) $('#job-department-other').focus(); });
     $('#job-filters').addEventListener('click', e => { const c = e.target.closest('.chip'); if (!c) return; $$('#job-filters .chip').forEach(x => x.classList.toggle('active', x === c)); jobFilter = c.dataset.f; renderJobs(); });
-    $('#page-picker').addEventListener('change', loadPageFields);
-    $('#content-form').addEventListener('submit', saveContent);
-    $('#cancel-content').addEventListener('click', () => $('#content-form').hidden = true);
-    $('#media-form').addEventListener('submit', uploadMedia);
+                $('#media-form').addEventListener('submit', uploadMedia);
     $('#copy-media-url').addEventListener('click', async () => { await navigator.clipboard.writeText($('#media-url').value); say('Image URL copied.'); });
     $('#role-form').addEventListener('submit', saveRole);
   }
