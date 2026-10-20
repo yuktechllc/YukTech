@@ -63,6 +63,7 @@ document.addEventListener("DOMContentLoaded", () => {
         attachment.setCustomValidity('');
         return;
       }
+      if (attachment && !attachment.files.length) attachment.disabled = true;
       const submitButton = contactForm.querySelector('button[type="submit"]');
       if (submitButton) {
         submitButton.disabled = true;
