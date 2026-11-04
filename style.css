@@ -999,3 +999,66 @@ main .career-safety-note {
     hyphens: none !important;
   }
 }
+
+
+/* =====================================================================
+   v3 – even word spacing + single-line intros
+   ===================================================================== */
+
+/* 1) Narrow cards: a 280px column can't justify long words without big gaps,
+      so allow clean hyphenation here only (min 3 letters either side). */
+main .service-card p, main .service-card li,
+main .approach-card p, main .pillar-card p,
+main .detail-highlight p, main .service-detail-grid p,
+main .office-phone, main .contact-sidebar p {
+  hyphens: auto !important;
+  -webkit-hyphens: auto !important;
+  hyphenate-limit-chars: 6 3 3;
+  text-wrap: wrap;
+  word-spacing: 0 !important;
+}
+
+/* 2) Intro lines under centred headings: use the full container width so
+      they sit on ONE line on desktop (no stretched gaps). */
+@media (min-width: 769px) {
+  main .section-intro p,
+  main .about-pillars-intro p,
+  main .section-intro .solutions-intro-line,
+  main .section-intro .business-requirement-description {
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(1160px, calc(100vw - 64px));
+    max-width: none !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    font-size: clamp(13px, 1.32vw, 16px) !important;
+    white-space: normal;
+  }
+  main .section-intro .solutions-intro-line,
+  main .section-intro .business-requirement-description { white-space: nowrap; }
+}
+
+/* 3) About hero tagline: one line, clearly smaller than the H1 */
+@media (min-width: 769px) {
+  main .about-hero p {
+    max-width: none !important;
+    width: 100%;
+    font-size: clamp(15px, 1.6vw, 20px) !important;
+    font-weight: 600 !important;
+    line-height: 1.5 !important;
+    white-space: nowrap;
+    text-align: left !important;
+    text-align-last: left !important;
+    word-spacing: normal !important;
+  }
+}
+@media (max-width: 768px) {
+  main .about-hero p { font-size: 18px !important; font-weight: 600 !important; line-height: 1.55 !important; max-width: 100% !important; }
+}
+
+/* v3b – tidy the tightest cards */
+main .capability-grid .service-card { padding-left: 18px; padding-right: 18px; }
+main .capability-grid .service-card p { font-size: 14px; hyphenate-limit-chars: 5 2 2; text-align: justify !important; }
+main .service-card p, main .approach-card p { hyphenate-limit-chars: 5 2 2; }
+main .office-phone, main .contact-detail p { text-align: left !important; text-align-last: left !important; hyphens: none !important; }

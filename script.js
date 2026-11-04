@@ -99,3 +99,22 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
 });
+
+
+/* Keep centred intro lines on ONE line on desktop by shrinking the font slightly (never below 12.5px). */
+(function(){
+  const SEL='main .section-intro p, main .about-pillars-intro p';
+  function fit(){
+    document.querySelectorAll(SEL).forEach(p=>{
+      p.style.removeProperty('font-size');
+      if (window.innerWidth<=768) return;
+      let fs=parseFloat(getComputedStyle(p).fontSize);
+      const lh=()=>parseFloat(getComputedStyle(p).lineHeight)||fs*1.7;
+      while (p.getBoundingClientRect().height > lh()*1.6 && fs>12.5){ fs-=0.5; p.style.setProperty('font-size',fs+'px','important'); }
+    });
+  }
+  let t; const later=()=>{clearTimeout(t);t=setTimeout(fit,60);};
+  window.addEventListener('load',()=>{fit();setTimeout(fit,900);setTimeout(fit,2200);});
+  window.addEventListener('resize',later);
+  document.addEventListener('DOMContentLoaded',fit);
+})();
