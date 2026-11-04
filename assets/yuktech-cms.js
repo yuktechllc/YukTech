@@ -209,7 +209,7 @@
       'Consulting & Delivery': ['IT Consulting & Advisory', 'Solution Architecture', 'Business Analysis', 'Project & Program Management', 'UI/UX Design', 'Delivery & Account Management'],
       'Staffing & Business': ['Recruitment & Talent Acquisition', 'Sales & Business Development', 'Marketing', 'HR & Operations', 'Finance & Accounting']
     };
-    const JOB_TYPES = ['Full-time', 'Part-time', 'Contract', 'Contract-to-hire', 'Temporary', 'Internship', 'Freelance'];
+    const JOB_TYPES = ['Full-time', 'Part-time', 'Contract', 'Contract-to-hire', 'Internship'];
     const EXPERIENCE = [['Fresher (0–1 yrs)', 0, 1], ['1–3 years', 1, 3], ['3–5 years', 3, 5], ['5–8 years', 5, 8], ['8–12 years', 8, 12], ['12+ years', 12, 99]];
 
     const norm = v => String(v || '').toLowerCase().replace(/[^a-z0-9+ ]+/g, ' ').replace(/\s+/g, ' ').trim();
@@ -240,6 +240,36 @@
     const knownLoc = job => Object.values(LOCATIONS).flat().some(l => locMatch(job, l));
     addExtras(fLoc, data.filter(j => !knownLoc(j)).map(j => j.location), new Set(), 'Other locations');
 
+    /* ---- framed location picker: search box + grouped, scrollable list (the native select stays hidden and holds the value) ---- */
+    const locDD = (() => {
+      const wrap = el('div', 'job-dd'), btn = el('button', 'job-dd-btn'); btn.type = 'button'; btn.setAttribute('aria-haspopup', 'listbox'); btn.setAttribute('aria-expanded', 'false');
+      const label = el('span', 'job-dd-label', 'All locations'), chev = el('span', 'job-dd-chev'); chev.setAttribute('aria-hidden', 'true'); btn.append(label, chev);
+      const panel = el('div', 'job-dd-panel'); panel.hidden = true;
+      const find = el('input', 'job-dd-search'); find.type = 'search'; find.placeholder = 'Search location'; find.setAttribute('aria-label', 'Search locations');
+      const list = el('div', 'job-dd-list'); list.setAttribute('role', 'listbox');
+      const empty = el('p', 'job-dd-empty', 'No matching location'); empty.hidden = true;
+      panel.append(find, list, empty); fLoc.classList.add('job-dd-native'); fLoc.tabIndex = -1; wrap.append(btn, panel, fLoc);
+      const choose = v => { fLoc.value = v; fLoc.dispatchEvent(new Event('change')); close(); };
+      const build = () => {
+        const term = find.value.trim().toLowerCase(); list.replaceChildren(); let any = false;
+        const opt = (text, v) => { const o = el('button', 'job-dd-opt' + (fLoc.value === v ? ' is-selected' : '')); o.type = 'button'; o.setAttribute('role', 'option'); o.setAttribute('aria-selected', String(fLoc.value === v)); o.append(el('span', null, text), el('span', 'job-dd-tick', fLoc.value === v ? '✓' : '')); o.addEventListener('click', () => choose(v)); return o; };
+        if (!term) list.append(opt('All locations', ''));
+        fLoc.querySelectorAll('optgroup').forEach(g => {
+          const items = [...g.querySelectorAll('option')].filter(o => !term || o.textContent.toLowerCase().includes(term)); if (!items.length) return;
+          any = true; const sec = el('div', 'job-dd-group'); sec.append(el('div', 'job-dd-heading', g.label)); items.forEach(o => sec.append(opt(o.textContent, o.value))); list.append(sec);
+        });
+        empty.hidden = any || !term;
+      };
+      function open() { build(); panel.hidden = false; wrap.classList.add('is-open'); btn.setAttribute('aria-expanded', 'true'); setTimeout(() => find.focus(), 0); }
+      function close() { panel.hidden = true; wrap.classList.remove('is-open'); btn.setAttribute('aria-expanded', 'false'); find.value = ''; }
+      btn.addEventListener('click', () => panel.hidden ? open() : close());
+      find.addEventListener('input', build);
+      document.addEventListener('click', e => { if (!wrap.contains(e.target)) close(); });
+      wrap.addEventListener('keydown', e => { if (e.key === 'Escape') { close(); btn.focus(); } });
+      wrap.sync = () => { label.textContent = fLoc.value || 'All locations'; wrap.classList.toggle('has-value', !!fLoc.value); };
+      return wrap;
+    })();
+
     const fDep = mkSelect('All departments'); addGroups(fDep, DEPARTMENTS);
     addExtras(fDep, data.map(j => j.department), new Set(Object.values(DEPARTMENTS).flat().map(norm)), 'Other departments');
 
@@ -261,7 +291,7 @@
         c.card.hidden = !visible; if (visible) shown++;
       });
       count.textContent = matches === cards.length ? plural(matches, 'opening') : plural(matches, 'opening') + ' found';
-      none.hidden = matches !== 0;
+      none.hidden = matches !== 0; locDD.sync();
       const left = matches - shown;
       more.hidden = left <= 0; more.textContent = 'Show more openings (' + left + ' more)';
     };
@@ -269,7 +299,7 @@
     q.addEventListener('input', resetLimit); [fLoc, fDep, fExp, fType].forEach(c => c.addEventListener('change', resetLimit));
     more.addEventListener('click', () => { limit += PAGE; run(); });
     reset.addEventListener('click', () => { q.value = ''; fLoc.value = fDep.value = fExp.value = fType.value = ''; resetLimit(); });
-    { const bar = el('div', 'job-toolbar'); bar.append(q, fLoc, fDep, fExp, fType, reset); host.before(bar); }
+    { const bar = el('div', 'job-toolbar'); bar.append(q, locDD, fDep, fExp, fType, reset); host.before(bar); }
     host.before(count); run();
 
     /* deep link: careers.html#job-<id> opens that role */
