@@ -101,20 +101,41 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
-/* Keep centred intro lines on ONE line on desktop by shrinking the font slightly (never below 12.5px). */
+/* Centred headings + intro lines stay on ONE line on desktop (font shrinks slightly if needed),
+   and any justified paragraph that would show wide word gaps falls back to left-aligned. */
 (function(){
-  const SEL='main .section-intro p, main .about-pillars-intro p';
+  const FIT='main .section-intro h2, main .about-pillars-intro h2, main .section-intro p, main .about-pillars-intro p';
+  const MAX_GAP = 0.75;                      // em; a normal space is about 0.28em
   function fit(){
-    document.querySelectorAll(SEL).forEach(p=>{
-      p.style.removeProperty('font-size');
+    document.querySelectorAll(FIT).forEach(el=>{
+      el.style.removeProperty('font-size');
       if (window.innerWidth<=768) return;
-      let fs=parseFloat(getComputedStyle(p).fontSize);
-      const lh=()=>parseFloat(getComputedStyle(p).lineHeight)||fs*1.7;
-      while (p.getBoundingClientRect().height > lh()*1.6 && fs>12.5){ fs-=0.5; p.style.setProperty('font-size',fs+'px','important'); }
+      const isH = el.tagName==='H2', min = isH ? 26 : 12.5;
+      let fs=parseFloat(getComputedStyle(el).fontSize);
+      const lh=()=>parseFloat(getComputedStyle(el).lineHeight)||fs*1.4;
+      while (el.getBoundingClientRect().height > lh()*1.6 && fs>min){ fs-=0.5; el.style.setProperty('font-size',fs+'px','important'); }
     });
   }
-  let t; const later=()=>{clearTimeout(t);t=setTimeout(fit,60);};
-  window.addEventListener('load',()=>{fit();setTimeout(fit,900);setTimeout(fit,2200);});
+  function maxGap(el){
+    const tw=document.createTreeWalker(el,NodeFilter.SHOW_TEXT), rects=[]; let n;
+    while((n=tw.nextNode())){ const re=/\S+/g; let m; while((m=re.exec(n.nodeValue))){ const r=document.createRange(); r.setStart(n,m.index); r.setEnd(n,m.index+m[0].length); const c=r.getClientRects(); if(c.length) rects.push(c[0]); } }
+    const fs=parseFloat(getComputedStyle(el).fontSize)||16; let max=0;
+    for(let i=1;i<rects.length;i++){ const a=rects[i-1],b=rects[i]; if(Math.abs(a.top-b.top)<4) max=Math.max(max,(b.left-a.right)/fs); }
+    return max;
+  }
+  function smartJustify(){
+    const els=[...document.querySelectorAll('main p, main li')];
+    els.forEach(e=>e.classList.remove('is-ragged'));
+    els.forEach(e=>{
+      if (e.querySelector('p,ul,ol,li')) return;
+      const cs=getComputedStyle(e); if (cs.textAlign!=='justify') return;
+      if (maxGap(e)>MAX_GAP) e.classList.add('is-ragged');
+    });
+  }
+  const run=()=>{ fit(); smartJustify(); };
+  let t; const later=()=>{clearTimeout(t);t=setTimeout(run,80);};
+  document.addEventListener('DOMContentLoaded',run);
+  window.addEventListener('load',()=>{run();setTimeout(run,900);setTimeout(run,2200);});
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(run);
   window.addEventListener('resize',later);
-  document.addEventListener('DOMContentLoaded',fit);
 })();

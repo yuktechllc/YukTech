@@ -196,15 +196,66 @@
     const count = el('p', 'job-count'); count.setAttribute('aria-live', 'polite');
     const none = el('p', 'job-none', 'No openings match your search. Try clearing the filters.'); none.hidden = true; host.after(none);
     const more = el('button', 'job-more'); more.type = 'button'; more.hidden = true; none.after(more);
-    const uniq = k => [...new Set(data.map(j => j[k]).filter(Boolean))].sort();
     const q = el('input', 'job-search'); q.type = 'search'; q.placeholder = 'Search by role, skill or location'; q.setAttribute('aria-label', 'Search jobs');
-    const mk = (label, key) => { const s = el('select', 'job-filter'); s.setAttribute('aria-label', label); s.append(new Option(label, '')); uniq(key).forEach(v => s.append(new Option(v, v))); return s; };
-    const fLoc = mk('All locations', 'location'), fDep = mk('All departments', 'department'), fType = mk('All job types', 'work_type');
+
+    /* ---- complete, fixed filter lists (not only what current openings use) ---- */
+    const LOCATIONS = {
+      'Work style': ['Remote', 'Hybrid', 'On-site'],
+      'India': ['Hyderabad', 'Bengaluru', 'Chennai', 'Pune', 'Mumbai', 'Delhi NCR', 'Noida', 'Gurugram', 'Kolkata', 'Ahmedabad', 'Nellore', 'Vijayawada', 'Visakhapatnam', 'Coimbatore', 'Kochi', 'Jaipur'],
+      'United States': ['Austin, TX', 'Dallas, TX', 'Houston, TX', 'San Jose, CA', 'San Francisco, CA', 'Los Angeles, CA', 'Seattle, WA', 'Chicago, IL', 'Atlanta, GA', 'Charlotte, NC', 'New York, NY', 'New Jersey', 'Boston, MA', 'Phoenix, AZ', 'Denver, CO', 'Washington, DC', 'Remote (US)']
+    };
+    const DEPARTMENTS = {
+      'Engineering & Technology': ['Software Engineering', 'Cloud & DevOps', 'Data & Analytics', 'AI & Machine Learning', 'Cybersecurity', 'ERP & Enterprise Applications', 'QA & Testing', 'IT Infrastructure & Support', 'Network Engineering', 'Database Administration'],
+      'Consulting & Delivery': ['IT Consulting & Advisory', 'Solution Architecture', 'Business Analysis', 'Project & Program Management', 'UI/UX Design', 'Delivery & Account Management'],
+      'Staffing & Business': ['Recruitment & Talent Acquisition', 'Sales & Business Development', 'Marketing', 'HR & Operations', 'Finance & Accounting']
+    };
+    const JOB_TYPES = ['Full-time', 'Part-time', 'Contract', 'Contract-to-hire', 'Temporary', 'Internship', 'Freelance'];
+    const EXPERIENCE = [['Fresher (0–1 yrs)', 0, 1], ['1–3 years', 1, 3], ['3–5 years', 3, 5], ['5–8 years', 5, 8], ['8–12 years', 8, 12], ['12+ years', 12, 99]];
+
+    const norm = v => String(v || '').toLowerCase().replace(/[^a-z0-9+ ]+/g, ' ').replace(/\s+/g, ' ').trim();
+    const cityOf = label => norm(label.replace(/,\s*[A-Z]{2}$/, '').replace(/\(.*\)/, ''));
+    const locMatch = (job, label) => {
+      const hay = norm(job.location); if (!hay) return false;
+      if (label === 'Remote (US)') return hay.includes('remote') && /\b(us|usa|united states)\b/.test(hay);
+      if (label === 'Delhi NCR') return /delhi|ncr/.test(hay);
+      if (label === 'Bengaluru') return /bengaluru|bangalore/.test(hay);
+      return hay.includes(cityOf(label));
+    };
+    const expRange = txt => {
+      const t = String(txt || '').toLowerCase(); if (!t.trim()) return null;
+      if (/fresher|entry|trainee|graduate/.test(t) && !/\d/.test(t)) return [0, 1];
+      const n = (t.match(/\d+(\.\d+)?/g) || []).map(Number); if (!n.length) return null;
+      if (/\+|plus|above|more than|minimum|min\b/.test(t) && n.length === 1) return [n[0], 99];
+      return n.length === 1 ? [n[0], n[0]] : [Math.min(n[0], n[1]), Math.max(n[0], n[1])];
+    };
+
+    const mkSelect = label => { const s = el('select', 'job-filter'); s.setAttribute('aria-label', label); s.append(new Option(label, '')); return s; };
+    const addGroups = (sel, groups) => Object.entries(groups).forEach(([g, items]) => { const og = document.createElement('optgroup'); og.label = g; items.forEach(v => og.append(new Option(v, v))); sel.append(og); });
+    const addExtras = (sel, values, known, label) => {
+      const extra = [...new Set(values.filter(Boolean).map(v => String(v).trim()))].filter(v => !known.has(norm(v))).sort();
+      if (extra.length) { const og = document.createElement('optgroup'); og.label = label; extra.forEach(v => og.append(new Option(v, v))); sel.append(og); }
+    };
+
+    const fLoc = mkSelect('All locations'); addGroups(fLoc, LOCATIONS);
+    const knownLoc = job => Object.values(LOCATIONS).flat().some(l => locMatch(job, l));
+    addExtras(fLoc, data.filter(j => !knownLoc(j)).map(j => j.location), new Set(), 'Other locations');
+
+    const fDep = mkSelect('All departments'); addGroups(fDep, DEPARTMENTS);
+    addExtras(fDep, data.map(j => j.department), new Set(Object.values(DEPARTMENTS).flat().map(norm)), 'Other departments');
+
+    const fExp = mkSelect('Any experience'); EXPERIENCE.forEach(([l]) => fExp.append(new Option(l, l)));
+
+    const fType = mkSelect('All job types'); JOB_TYPES.forEach(v => fType.append(new Option(v, v)));
+    addExtras(fType, data.map(j => j.work_type), new Set(JOB_TYPES.map(norm)), 'Other types');
+
+    const allLoc = new Set(Object.values(LOCATIONS).flat());
+    const okLoc = (job, v) => !v || (allLoc.has(v) ? locMatch(job, v) : norm(job.location) === norm(v));
+    const okExp = (job, v) => { if (!v) return true; const r = expRange(job.experience), w = EXPERIENCE.find(e => e[0] === v); return !!(r && w && r[0] <= w[2] && r[1] >= w[1]); };
     const reset = el('button', 'job-reset', 'Clear filters'); reset.type = 'button';
     const run = () => {
       const term = q.value.trim().toLowerCase(); let matches = 0, shown = 0;
       cards.forEach(c => {
-        const ok = (!term || c.hay.includes(term)) && (!fLoc.value || c.job.location === fLoc.value) && (!fDep.value || c.job.department === fDep.value) && (!fType.value || c.job.work_type === fType.value);
+        const ok = (!term || c.hay.includes(term)) && okLoc(c.job, fLoc.value) && (!fDep.value || norm(c.job.department) === norm(fDep.value)) && okExp(c.job, fExp.value) && (!fType.value || norm(c.job.work_type) === norm(fType.value));
         if (ok) matches++;
         const visible = ok && matches <= limit;
         c.card.hidden = !visible; if (visible) shown++;
@@ -215,10 +266,10 @@
       more.hidden = left <= 0; more.textContent = 'Show more openings (' + left + ' more)';
     };
     const resetLimit = () => { limit = PAGE; run(); };
-    q.addEventListener('input', resetLimit); [fLoc, fDep, fType].forEach(c => c.addEventListener('change', resetLimit));
+    q.addEventListener('input', resetLimit); [fLoc, fDep, fExp, fType].forEach(c => c.addEventListener('change', resetLimit));
     more.addEventListener('click', () => { limit += PAGE; run(); });
-    reset.addEventListener('click', () => { q.value = ''; fLoc.value = fDep.value = fType.value = ''; resetLimit(); });
-    if (data.length >= 3) { const bar = el('div', 'job-toolbar'); bar.append(q, fLoc, fDep, fType, reset); host.before(bar); }
+    reset.addEventListener('click', () => { q.value = ''; fLoc.value = fDep.value = fExp.value = fType.value = ''; resetLimit(); });
+    { const bar = el('div', 'job-toolbar'); bar.append(q, fLoc, fDep, fExp, fType, reset); host.before(bar); }
     host.before(count); run();
 
     /* deep link: careers.html#job-<id> opens that role */

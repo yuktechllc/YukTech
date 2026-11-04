@@ -1006,14 +1006,13 @@ main .career-safety-note {
    ===================================================================== */
 
 /* 1) Narrow cards: a 280px column can't justify long words without big gaps,
-      so allow clean hyphenation here only (min 3 letters either side). */
+      no hyphenation; script.js switches a paragraph to left-aligned only if justify would leave big gaps. */
 main .service-card p, main .service-card li,
 main .approach-card p, main .pillar-card p,
 main .detail-highlight p, main .service-detail-grid p,
 main .office-phone, main .contact-sidebar p {
-  hyphens: auto !important;
-  -webkit-hyphens: auto !important;
-  hyphenate-limit-chars: 6 3 3;
+  hyphens: none !important;
+  -webkit-hyphens: none !important;
   text-wrap: wrap;
   word-spacing: 0 !important;
 }
@@ -1059,6 +1058,26 @@ main .office-phone, main .contact-sidebar p {
 
 /* v3b – tidy the tightest cards */
 main .capability-grid .service-card { padding-left: 18px; padding-right: 18px; }
-main .capability-grid .service-card p { font-size: 14px; hyphenate-limit-chars: 5 2 2; text-align: justify !important; }
-main .service-card p, main .approach-card p { hyphenate-limit-chars: 5 2 2; }
+main .capability-grid .service-card p { font-size: 14px; text-align: justify !important; }
 main .office-phone, main .contact-detail p { text-align: left !important; text-align-last: left !important; hyphens: none !important; }
+
+/* Careers filter bar: search + location + department + experience + job type */
+.job-toolbar{grid-template-columns:2fr 1.2fr 1.2fr 1fr 1fr auto}
+@media(max-width:1000px){.job-toolbar{grid-template-columns:1fr 1fr}.job-search{grid-column:1/-1}}
+@media(max-width:640px){.job-toolbar{grid-template-columns:1fr}}
+
+
+/* v4 – paragraphs that would show wide word gaps when justified are set ragged by script.js */
+main p.is-ragged.is-ragged.is-ragged, main li.is-ragged.is-ragged.is-ragged {
+  text-align: left !important; text-align-last: left !important; hyphens: none !important;
+}
+
+/* v4 – centred section headings on ONE line (desktop) */
+@media (min-width: 769px) {
+  main .section-intro h2, main .about-pillars-intro h2 {
+    position: relative; left: 50%; transform: translateX(-50%);
+    width: min(1160px, calc(100vw - 64px)); max-width: none !important;
+    margin-left: 0 !important; margin-right: 0 !important;
+    text-align: center !important; text-wrap: nowrap;
+  }
+}
