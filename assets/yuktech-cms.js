@@ -240,44 +240,55 @@
     const knownLoc = job => Object.values(LOCATIONS).flat().some(l => locMatch(job, l));
     addExtras(fLoc, data.filter(j => !knownLoc(j)).map(j => j.location), new Set(), 'Other locations');
 
-    /* ---- framed location picker: search box + grouped, scrollable list (the native select stays hidden and holds the value) ---- */
-    const locDD = (() => {
+    const fDep = mkSelect('All departments'); addGroups(fDep, DEPARTMENTS);
+    addExtras(fDep, data.map(j => j.department), new Set(Object.values(DEPARTMENTS).flat().map(norm)), 'Other departments');
+
+    const fExp = mkSelect('All experience'); EXPERIENCE.forEach(([l]) => fExp.append(new Option(l, l)));
+
+    const fType = mkSelect('All job types'); JOB_TYPES.forEach(v => fType.append(new Option(v, v)));
+    addExtras(fType, data.map(j => j.work_type), new Set(JOB_TYPES.map(norm)), 'Other types');
+
+    /* ---- framed dropdown (same look for every filter): optional search box + grouped, scrollable list.
+       The native <select> stays hidden inside and keeps the value, so the filter logic is unchanged. ---- */
+    const dropdowns = [];
+    const makeDD = (select, allLabel, searchHint) => {
       const wrap = el('div', 'job-dd'), btn = el('button', 'job-dd-btn'); btn.type = 'button'; btn.setAttribute('aria-haspopup', 'listbox'); btn.setAttribute('aria-expanded', 'false');
-      const label = el('span', 'job-dd-label', 'All locations'), chev = el('span', 'job-dd-chev'); chev.setAttribute('aria-hidden', 'true'); btn.append(label, chev);
+      const label = el('span', 'job-dd-label', allLabel), chev = el('span', 'job-dd-chev'); chev.setAttribute('aria-hidden', 'true'); btn.append(label, chev);
       const panel = el('div', 'job-dd-panel'); panel.hidden = true;
-      const find = el('input', 'job-dd-search'); find.type = 'search'; find.placeholder = 'Search location'; find.setAttribute('aria-label', 'Search locations');
+      const total = select.querySelectorAll('option').length - 1, searchable = total > 8;
+      const find = el('input', 'job-dd-search'); find.type = 'search'; find.placeholder = searchHint; find.setAttribute('aria-label', searchHint);
       const list = el('div', 'job-dd-list'); list.setAttribute('role', 'listbox');
-      const empty = el('p', 'job-dd-empty', 'No matching location'); empty.hidden = true;
-      panel.append(find, list, empty); fLoc.classList.add('job-dd-native'); fLoc.tabIndex = -1; wrap.append(btn, panel, fLoc);
-      const choose = v => { fLoc.value = v; fLoc.dispatchEvent(new Event('change')); close(); };
+      const empty = el('p', 'job-dd-empty', 'No matching option'); empty.hidden = true;
+      if (searchable) panel.append(find); panel.append(list, empty);
+      select.classList.add('job-dd-native'); select.tabIndex = -1; wrap.append(btn, panel, select);
+      const choose = v => { select.value = v; select.dispatchEvent(new Event('change')); close(); };
       const build = () => {
         const term = find.value.trim().toLowerCase(); list.replaceChildren(); let any = false;
-        const opt = (text, v) => { const o = el('button', 'job-dd-opt' + (fLoc.value === v ? ' is-selected' : '')); o.type = 'button'; o.setAttribute('role', 'option'); o.setAttribute('aria-selected', String(fLoc.value === v)); o.append(el('span', null, text), el('span', 'job-dd-tick', fLoc.value === v ? '✓' : '')); o.addEventListener('click', () => choose(v)); return o; };
-        if (!term) list.append(opt('All locations', ''));
-        fLoc.querySelectorAll('optgroup').forEach(g => {
+        const opt = (text, v) => { const on = select.value === v; const o = el('button', 'job-dd-opt' + (on ? ' is-selected' : '')); o.type = 'button'; o.setAttribute('role', 'option'); o.setAttribute('aria-selected', String(on)); o.append(el('span', null, text), el('span', 'job-dd-tick', on ? '✓' : '')); o.addEventListener('click', () => choose(v)); return o; };
+        if (!term) list.append(opt(allLabel, ''));
+        const groups = [...select.children].filter(n => n.tagName === 'OPTGROUP');
+        const loose = [...select.children].filter(n => n.tagName === 'OPTION' && n.value !== '');
+        if (loose.length) { const items = loose.filter(o => !term || o.textContent.toLowerCase().includes(term)); if (items.length) { any = true; const sec = el('div', 'job-dd-group'); items.forEach(o => sec.append(opt(o.textContent, o.value))); list.append(sec); } }
+        groups.forEach(g => {
           const items = [...g.querySelectorAll('option')].filter(o => !term || o.textContent.toLowerCase().includes(term)); if (!items.length) return;
           any = true; const sec = el('div', 'job-dd-group'); sec.append(el('div', 'job-dd-heading', g.label)); items.forEach(o => sec.append(opt(o.textContent, o.value))); list.append(sec);
         });
         empty.hidden = any || !term;
       };
-      function open() { build(); panel.hidden = false; wrap.classList.add('is-open'); btn.setAttribute('aria-expanded', 'true'); setTimeout(() => find.focus(), 0); }
+      function open() { dropdowns.forEach(d => d !== wrap && d.close()); build(); panel.hidden = false; wrap.classList.add('is-open'); btn.setAttribute('aria-expanded', 'true'); if (searchable) setTimeout(() => find.focus(), 0); }
       function close() { panel.hidden = true; wrap.classList.remove('is-open'); btn.setAttribute('aria-expanded', 'false'); find.value = ''; }
       btn.addEventListener('click', () => panel.hidden ? open() : close());
       find.addEventListener('input', build);
       document.addEventListener('click', e => { if (!wrap.contains(e.target)) close(); });
       wrap.addEventListener('keydown', e => { if (e.key === 'Escape') { close(); btn.focus(); } });
-      wrap.sync = () => { label.textContent = fLoc.value || 'All locations'; wrap.classList.toggle('has-value', !!fLoc.value); };
-      return wrap;
-    })();
-
-    const fDep = mkSelect('All departments'); addGroups(fDep, DEPARTMENTS);
-    addExtras(fDep, data.map(j => j.department), new Set(Object.values(DEPARTMENTS).flat().map(norm)), 'Other departments');
-
-    const fExp = mkSelect('Any experience'); EXPERIENCE.forEach(([l]) => fExp.append(new Option(l, l)));
-
-    const fType = mkSelect('All job types'); JOB_TYPES.forEach(v => fType.append(new Option(v, v)));
-    addExtras(fType, data.map(j => j.work_type), new Set(JOB_TYPES.map(norm)), 'Other types');
-
+      wrap.close = close;
+      wrap.sync = () => { label.textContent = select.value || allLabel; wrap.classList.toggle('has-value', !!select.value); };
+      dropdowns.push(wrap); return wrap;
+    };
+    const locDD = makeDD(fLoc, 'All locations', 'Search location');
+    const depDD = makeDD(fDep, 'All departments', 'Search department');
+    const expDD = makeDD(fExp, 'All experience', 'Search experience');
+    const typeDD = makeDD(fType, 'All job types', 'Search job type');
     const allLoc = new Set(Object.values(LOCATIONS).flat());
     const okLoc = (job, v) => !v || (allLoc.has(v) ? locMatch(job, v) : norm(job.location) === norm(v));
     const okExp = (job, v) => { if (!v) return true; const r = expRange(job.experience), w = EXPERIENCE.find(e => e[0] === v); return !!(r && w && r[0] <= w[2] && r[1] >= w[1]); };
@@ -291,7 +302,7 @@
         c.card.hidden = !visible; if (visible) shown++;
       });
       count.textContent = matches === cards.length ? plural(matches, 'opening') : plural(matches, 'opening') + ' found';
-      none.hidden = matches !== 0; locDD.sync();
+      none.hidden = matches !== 0; dropdowns.forEach(d => d.sync());
       const left = matches - shown;
       more.hidden = left <= 0; more.textContent = 'Show more openings (' + left + ' more)';
     };
@@ -299,7 +310,7 @@
     q.addEventListener('input', resetLimit); [fLoc, fDep, fExp, fType].forEach(c => c.addEventListener('change', resetLimit));
     more.addEventListener('click', () => { limit += PAGE; run(); });
     reset.addEventListener('click', () => { q.value = ''; fLoc.value = fDep.value = fExp.value = fType.value = ''; resetLimit(); });
-    { const bar = el('div', 'job-toolbar'); bar.append(q, locDD, fDep, fExp, fType, reset); host.before(bar); }
+    { const bar = el('div', 'job-toolbar'); bar.append(q, locDD, depDD, expDD, typeDD, reset); host.before(bar); }
     host.before(count); run();
 
     /* deep link: careers.html#job-<id> opens that role */

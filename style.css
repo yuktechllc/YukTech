@@ -1112,3 +1112,6 @@ main p.is-ragged.is-ragged.is-ragged, main li.is-ragged.is-ragged.is-ragged {
 .job-dd-tick{color:var(--teal-dark);font-weight:800}
 .job-dd-empty{margin:8px 10px;color:var(--muted);font-size:13px;text-align:left!important}
 @media(max-width:640px){.job-dd-panel{width:100%}}
+/* keep the right-most panels inside the filter bar */
+@media(min-width:1001px){.job-dd:nth-last-child(2) .job-dd-panel{left:auto;right:0}}
+.job-dd-panel{max-width:calc(100vw - 32px)}
