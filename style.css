@@ -921,7 +921,7 @@ main .breadcrumbs * {
 /* =====================================================================
    JUSTIFIED TEXT (Word-style "Justify")
    Every paragraph / list item stretches edge-to-edge; the last line of a
-   paragraph stays left-aligned. Hyphenation keeps word gaps even.
+   paragraph stays left-aligned. No word-breaking, like the reference.
    Intentionally centred items (hero card, section intros, empty states,
    buttons, labels) are kept centred below.
    ===================================================================== */
@@ -930,9 +930,9 @@ main p, main li, main .form-note, main .hero-note,
   text-align: justify !important;
   text-align-last: left !important;
   text-justify: inter-word !important;
-  hyphens: auto !important;
-  -webkit-hyphens: auto !important;
-  overflow-wrap: break-word !important;
+  hyphens: none !important;
+  -webkit-hyphens: none !important;
+  overflow-wrap: normal !important;
   word-break: normal !important;
 }
 /* Short UI labels – never stretch these */
@@ -957,5 +957,45 @@ main .section-intro .business-requirement-description {
 }
 /* Narrow phones: very short columns create big gaps, so allow hyphenation only */
 @media(max-width:420px){
-  main p, main li { hyphens: auto !important; word-spacing: -.02em; }
+  main p, main li { hyphens: none !important; }
+}
+
+/* =====================================================================
+   JUSTIFY – centred intro paragraphs too
+   Lines are stretched edge-to-edge like a Word "Justify" paragraph; only the
+   final line stays centred under the centred heading (left on mobile).
+   ===================================================================== */
+main .section-intro p,
+main .about-pillars-intro p,
+main .section:has(.pillar-card) .section-intro p,
+main .section:has(.approach-grid) .section-intro p,
+main .section:has(.capability-grid) .section-intro p,
+main .section-intro .business-requirement-description,
+main .section-intro .solutions-intro-line,
+main .career-safety-note {
+  text-align: justify !important;
+  text-align-last: center !important;
+  text-justify: inter-word !important;
+  hyphens: none !important;
+  -webkit-hyphens: none !important;
+  text-wrap: wrap !important;
+  max-width: 100%;
+}
+@media (max-width: 768px) {
+  main .section-intro p, main .about-pillars-intro p,
+  main .section:has(.pillar-card) .section-intro p,
+  main .section:has(.approach-grid) .section-intro p,
+  main .section:has(.capability-grid) .section-intro p,
+  main .section-intro .business-requirement-description,
+  main .section-intro .solutions-intro-line,
+  main .career-safety-note { text-align-last: left !important; }
+}
+
+/* Business page one-line intro: stays centred on desktop; justified when it wraps */
+@media (max-width: 900px) {
+  main .section-intro:has(> .business-requirement-title) > .business-requirement-description {
+    text-align: justify !important;
+    text-align-last: left !important;
+    hyphens: none !important;
+  }
 }
