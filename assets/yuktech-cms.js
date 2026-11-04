@@ -155,55 +155,75 @@
     if (error || !data || !data.length) return;
     host.replaceChildren(); host.classList.add('job-list');
 
+    const PAGE = 8;                       // how many openings are shown before "Show more"
+    let limit = PAGE;
+
     const cards = data.map(job => {
       const card = el('article', 'job-card'); card.id = 'job-' + job.id;
-      const main = el('div', 'job-card-main'), head = el('div', 'job-card-head');
+
+      /* ---- compact row (always visible) ---- */
+      const row = el('div', 'job-row');
+      const info = el('div', 'job-info');
+      const head = el('div', 'job-card-head');
       head.append(el('h3', 'job-title', job.title));
       if (job.published_at && Date.now() - new Date(job.published_at).getTime() < 7 * 86400000) head.append(el('span', 'job-badge-new', 'New'));
       const chips = el('ul', 'job-chips');
       [job.location, job.work_type, job.department, job.experience && (/\d/.test(job.experience) && !/year|yr/i.test(job.experience) ? job.experience + ' yrs exp' : job.experience)].filter(Boolean).forEach(c => chips.append(el('li', null, c)));
-      const excerpt = el('p', 'job-excerpt', excerptOf(job.description));
-      const details = el('div', 'job-details'); details.hidden = true; details.append(renderJobBody(job.description));
-      main.append(head, chips, excerpt, details);
+      info.append(head, chips);
 
-      const side = el('div', 'job-card-side');
-      const posted = postedLabel(job.published_at); if (posted) side.append(el('span', 'job-posted', posted));
+      const actions = el('div', 'job-actions');
+      const posted = postedLabel(job.published_at); if (posted) actions.append(el('span', 'job-posted', posted));
       let href = 'apply.html?job=' + encodeURIComponent(job.id), external = false;
       if (job.apply_url) { try { const u = new URL(job.apply_url); if (['https:','http:','mailto:'].includes(u.protocol)) { href = u.href; external = u.protocol !== 'mailto:'; } } catch {} }
-      const apply = el('a', 'btn btn-primary', 'Apply now'); apply.href = href; if (external) { apply.target = '_blank'; apply.rel = 'noopener noreferrer'; }
-      const toggle = el('button', 'job-toggle', 'View details'); toggle.type = 'button'; toggle.setAttribute('aria-expanded', 'false');
-      const setOpen = open => { details.hidden = !open; excerpt.hidden = open; toggle.textContent = open ? 'Hide details' : 'View details'; toggle.setAttribute('aria-expanded', String(open)); };
+      const apply = el('a', 'btn btn-primary job-apply', 'Apply now'); apply.href = href; if (external) { apply.target = '_blank'; apply.rel = 'noopener noreferrer'; }
+      const toggle = el('button', 'job-toggle'); toggle.type = 'button'; toggle.setAttribute('aria-expanded', 'false');
+      const tLabel = el('span', null, 'Details'), chev = el('span', 'job-chevron'); chev.setAttribute('aria-hidden', 'true');
+      toggle.append(tLabel, chev);
+      actions.append(toggle, apply);
+      row.append(info, actions);
+
+      /* ---- full description (collapsed by default) ---- */
+      const details = el('div', 'job-details'); details.hidden = true; details.append(renderJobBody(job.description));
+
+      const setOpen = open => { details.hidden = !open; card.classList.toggle('is-open', open); tLabel.textContent = open ? 'Hide' : 'Details'; toggle.setAttribute('aria-expanded', String(open)); };
       toggle.addEventListener('click', () => setOpen(details.hidden));
-      side.append(apply, toggle);
-      card.append(main, side); host.append(card);
+      info.addEventListener('click', e => { if (!e.target.closest('a,button')) setOpen(details.hidden); });
+      card.append(row, details); host.append(card);
       return {job, card, setOpen, hay: [job.title, job.location, job.department, job.work_type, descText(job.description)].join(' ').toLowerCase()};
     });
 
     /* toolbar: search + filters (shown when there are 3 or more openings) */
     const count = el('p', 'job-count'); count.setAttribute('aria-live', 'polite');
     const none = el('p', 'job-none', 'No openings match your search. Try clearing the filters.'); none.hidden = true; host.after(none);
+    const more = el('button', 'job-more'); more.type = 'button'; more.hidden = true; none.after(more);
     const uniq = k => [...new Set(data.map(j => j[k]).filter(Boolean))].sort();
     const q = el('input', 'job-search'); q.type = 'search'; q.placeholder = 'Search by role, skill or location'; q.setAttribute('aria-label', 'Search jobs');
     const mk = (label, key) => { const s = el('select', 'job-filter'); s.setAttribute('aria-label', label); s.append(new Option(label, '')); uniq(key).forEach(v => s.append(new Option(v, v))); return s; };
     const fLoc = mk('All locations', 'location'), fDep = mk('All departments', 'department'), fType = mk('All job types', 'work_type');
     const reset = el('button', 'job-reset', 'Clear filters'); reset.type = 'button';
     const run = () => {
-      const term = q.value.trim().toLowerCase(); let shown = 0;
+      const term = q.value.trim().toLowerCase(); let matches = 0, shown = 0;
       cards.forEach(c => {
         const ok = (!term || c.hay.includes(term)) && (!fLoc.value || c.job.location === fLoc.value) && (!fDep.value || c.job.department === fDep.value) && (!fType.value || c.job.work_type === fType.value);
-        c.card.hidden = !ok; if (ok) shown++;
+        if (ok) matches++;
+        const visible = ok && matches <= limit;
+        c.card.hidden = !visible; if (visible) shown++;
       });
-      count.textContent = plural(shown, 'opening') + (shown === cards.length ? '' : ' found');
-      none.hidden = shown !== 0;
+      count.textContent = matches === cards.length ? plural(matches, 'opening') : plural(matches, 'opening') + ' found';
+      none.hidden = matches !== 0;
+      const left = matches - shown;
+      more.hidden = left <= 0; more.textContent = 'Show more openings (' + left + ' more)';
     };
-    [q, fLoc, fDep, fType].forEach(c => c.addEventListener(c === q ? 'input' : 'change', run));
-    reset.addEventListener('click', () => { q.value = ''; fLoc.value = fDep.value = fType.value = ''; run(); });
+    const resetLimit = () => { limit = PAGE; run(); };
+    q.addEventListener('input', resetLimit); [fLoc, fDep, fType].forEach(c => c.addEventListener('change', resetLimit));
+    more.addEventListener('click', () => { limit += PAGE; run(); });
+    reset.addEventListener('click', () => { q.value = ''; fLoc.value = fDep.value = fType.value = ''; resetLimit(); });
     if (data.length >= 3) { const bar = el('div', 'job-toolbar'); bar.append(q, fLoc, fDep, fType, reset); host.before(bar); }
     host.before(count); run();
 
     /* deep link: careers.html#job-<id> opens that role */
-    const target = cards.find(c => location.hash === '#' + c.card.id);
-    if (target) { target.setOpen(true); target.card.scrollIntoView({block:'center'}); }
+    const idx = cards.findIndex(c => location.hash === '#' + c.card.id);
+    if (idx >= 0) { if (idx >= limit) { limit = idx + 1; run(); } cards[idx].setOpen(true); cards[idx].card.scrollIntoView({block:'center'}); }
   }
 
   document.addEventListener('DOMContentLoaded', () => { applyContent(); applyJobs(); });
