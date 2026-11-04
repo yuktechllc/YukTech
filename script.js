@@ -126,6 +126,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function smartJustify(){
     const els=[...document.querySelectorAll('main p, main li')];
     els.forEach(e=>e.classList.remove('is-ragged'));
+    if (window.innerWidth<=768) return;   // phones: stay justified (CSS hyphenation handles the gaps)
     els.forEach(e=>{
       if (e.querySelector('p,ul,ol,li')) return;
       const cs=getComputedStyle(e); if (cs.textAlign!=='justify') return;

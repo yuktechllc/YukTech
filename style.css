@@ -1115,3 +1115,45 @@ main p.is-ragged.is-ragged.is-ragged, main li.is-ragged.is-ragged.is-ragged {
 /* keep the right-most panels inside the filter bar */
 @media(min-width:1001px){.job-dd:nth-last-child(2) .job-dd-panel{left:auto;right:0}}
 .job-dd-panel{max-width:calc(100vw - 32px)}
+
+
+/* =====================================================================
+   MOBILE JUSTIFY FIX
+   Phones have narrow columns, so justified text with hyphenation switched off
+   stretches word gaps (or script.js falls back to left-aligned = ragged ends).
+   Allow automatic hyphenation (pages are lang="en") so every line fills the
+   width edge to edge; the last line of a paragraph stays left-aligned.
+   ===================================================================== */
+@media (max-width: 768px) {
+  main p, main li, main .form-note, main .hero-note,
+  .site-footer p, .site-banner-text, .legal-content p, .legal-content li,
+  main .service-card p, main .service-card li,
+  main .approach-card p, main .pillar-card p,
+  main .detail-highlight p, main .service-detail-grid p,
+  main .contact-sidebar p,
+  main .capability-grid .service-card p,
+  .founder-copy .founder-biography p,
+  main .section-intro p, main .about-pillars-intro p {
+    text-align: justify !important;
+    text-align-last: left !important;
+    text-justify: inter-word !important;
+    hyphens: auto !important;
+    -webkit-hyphens: auto !important;
+    hyphenate-limit-chars: 6 3 3;
+    overflow-wrap: break-word !important;
+    word-break: normal !important;
+    word-spacing: normal !important;
+  }
+  /* never let the old "ragged" fallback un-justify text on phones */
+  main p.is-ragged.is-ragged.is-ragged, main li.is-ragged.is-ragged.is-ragged {
+    text-align: justify !important;
+    text-align-last: left !important;
+    hyphens: auto !important;
+    -webkit-hyphens: auto !important;
+  }
+  /* short UI bits stay as they were */
+  main .job-chips li, main .breadcrumbs, main .breadcrumbs *, main .eyebrow, main .btn,
+  main .footer-links li, main .main-nav li, main nav li, main .office-phone {
+    text-align: left !important; hyphens: none !important; -webkit-hyphens: none !important;
+  }
+}
